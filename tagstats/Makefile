@@ -16,7 +16,7 @@ CXXFLAGS += -DTAGSTATS_COUNT_USERS
 CXXFLAGS += -DTAGSTATS_COUNT_KEY_COMBINATIONS
 CXXFLAGS += -DTAGSTATS_COUNT_TAG_COMBINATIONS
 
-CXXFLAGS += -DTAGSTATS_GEODISTRIBUTION_INT=uint16_t
+CXXFLAGS += -DTAGSTATS_GEODISTRIBUTION_INT=uint32_t
 CXXFLAGS += -DTAGSTATS_GEODISTRIBUTION_FOR_WAYS=`../bin/taginfo-config.rb tagstats.geodistribution`
 #CXXFLAGS += -DTAGSTATS_GEODISTRIBUTION_FOR_WAYS=SparseTable
 #CXXFLAGS += -DTAGSTATS_GEODISTRIBUTION_FOR_WAYS=Mmap
@@ -29,7 +29,7 @@ LDFLAGS = -L/usr/local/lib -lexpat -lpthread
 
 LIB_SQLITE   = -lsqlite3
 LIB_GD       = -lgd -lz -lm
-LIB_PROTOBUF = -lz -lprotobuf-lite -losmpbf
+LIB_PROTOBUF = -L../../libosmpbf/src -lz -lprotobuf-lite -losmpbf
 
 .PHONY: all clean install
 

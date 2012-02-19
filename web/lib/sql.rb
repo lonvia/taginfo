@@ -155,11 +155,11 @@ module SQL
         end
 
         def log_query(query, params)
-            if params.size > 0
-                puts "Query: #{query}; (with params: #{params.map{ |p| "'#{p}'" }.join(', ')})"
-            else
-                puts "Query: #{query};"
-            end
+            #if params.size > 0
+            #    puts "Query: #{query}; (with params: #{params.map{ |p| "'#{p}'" }.join(', ')})"
+            #else
+            #    puts "Query: #{query};"
+            #end
         end
 
         def execute(&block)
