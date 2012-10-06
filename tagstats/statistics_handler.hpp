@@ -1,28 +1,28 @@
-#ifndef TAGSTATS_HANDLER_STATISTICS_HPP
-#define TAGSTATS_HANDLER_STATISTICS_HPP
+#ifndef TAGSTATS_STATISTICS_HANDLER_HPP
+#define TAGSTATS_STATISTICS_HANDLER_HPP
 
 /*
 
-Copyright 2011 Jochen Topf <jochen@topf.org> and others (see README).
+  Copyright 2012 Jochen Topf <jochen@topf.org>.
 
-This file is part of Taginfo (https://github.com/joto/taginfo).
+  This file is part of Tagstats.
 
-Osmium is free software: you can redistribute it and/or modify it under the
-terms of the GNU Lesser General Public License or (at your option) the GNU
-General Public License as published by the Free Software Foundation, either
-version 3 of the Licenses, or (at your option) any later version.
+  Tagstats is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-Osmium is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU Lesser General Public License and the GNU
-General Public License for more details.
+  Tagstats is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-You should have received a copy of the Licenses along with Osmium. If not, see
-<http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU General Public License
+  along with Tagstats.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include <osmium/utils/sqlite.hpp>
+#include "sqlite.hpp"
 
 /**
  * Osmium handler that collects basic statistics from OSM data and
@@ -32,7 +32,9 @@ class StatisticsHandler : public Osmium::Handler::Base {
 
 public:
 
-    StatisticsHandler(Osmium::Sqlite::Database& database) : Base(), m_database(database) {
+    StatisticsHandler(Sqlite::Database& database) :
+        Base(),
+        m_database(database) {
         // if you change anything in this array, also change the corresponding struct below
         static const char *sn[] = {
             "nodes",
@@ -101,12 +103,12 @@ public:
             m_stats.max_way_id = m_id;
         }
         m_stats.way_tags += m_tag_count;
-        m_stats.way_nodes += way->node_count();
+        m_stats.way_nodes += way->nodes().size();
         if (m_tag_count > (int64_t) m_stats.max_tags_on_way) {
             m_stats.max_tags_on_way = m_tag_count;
         }
-        if (way->node_count() > (int64_t) m_stats.max_nodes_on_way) {
-            m_stats.max_nodes_on_way = way->node_count();
+        if (way->nodes().size() > (int64_t) m_stats.max_nodes_on_way) {
+            m_stats.max_nodes_on_way = way->nodes().size();
         }
         if (m_version > (int64_t) m_stats.max_way_version) {
             m_stats.max_way_version = m_version;
@@ -136,23 +138,21 @@ public:
     }
 
     void final() {
-        Osmium::Sqlite::Statement* statement_insert_into_main_stats = m_database.prepare("INSERT INTO stats (key, value) VALUES (?, ?);");
+        Sqlite::Statement statement_insert_into_main_stats(m_database, "INSERT INTO stats (key, value) VALUES (?, ?);");
         m_database.begin_transaction();
 
         for (int i=0; m_stat_names[i]; ++i) {
             statement_insert_into_main_stats
-            ->bind_text(m_stat_names[i])
-            ->bind_int64( ((uint64_t *) &m_stats)[i] )
-            ->execute();
+            .bind_text(m_stat_names[i])
+            .bind_int64( ((uint64_t *) &m_stats)[i] )
+            .execute();
         }
         statement_insert_into_main_stats
-        ->bind_text("nodes_with_tags")
-        ->bind_int64( ((uint64_t *) &m_stats)[0] - ((uint64_t *) &m_stats)[1] )
-        ->execute();
+        .bind_text("nodes_with_tags")
+        .bind_int64( ((uint64_t *) &m_stats)[0] - ((uint64_t *) &m_stats)[1] )
+        .execute();
 
         m_database.commit();
-
-        delete statement_insert_into_main_stats;
     }
 
 private:
@@ -190,7 +190,7 @@ private:
 
     const char **m_stat_names;
 
-    Osmium::Sqlite::Database& m_database;
+    Sqlite::Database& m_database;
 
     osm_object_id_t m_id;
     osm_version_t   m_version;
@@ -217,4 +217,4 @@ private:
 
 }; // class StatisticsHandler
 
-#endif // TAGSTATS_HANDLER_STATISTICS_HPP
+#endif // TAGSTATS_STATISTICS_HANDLER_HPP

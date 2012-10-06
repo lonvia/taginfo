@@ -9,8 +9,7 @@ CXX = g++
 #CXXFLAGS = -g
 CXXFLAGS = -O3
 
-CXXFLAGS += -std=c++0x -Wall -Wextra -Wredundant-decls -Wdisabled-optimization -pedantic
-#CXXFLAGS += -Wpadded -Winline
+CXXFLAGS += -Wall -Wextra -Wredundant-decls -Wdisabled-optimization -pedantic
 
 CXXFLAGS += -DTAGSTATS_COUNT_USERS
 CXXFLAGS += -DTAGSTATS_COUNT_KEY_COMBINATIONS
@@ -33,21 +32,25 @@ CXXFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 CXXFLAGS += `../bin/taginfo-config.rb tagstats.cxxflags`
 
-LDFLAGS = -L/usr/local/lib -lexpat
-
-LIB_SQLITE = -lsqlite3
+LIB_EXPAT  = -lexpat
 LIB_GD     = -lgd -lz -lm
 LIB_PBF    = -lz -lpthread -lprotobuf-lite -losmpbf
+LIB_SQLITE = -lsqlite3
+
+LDFLAGS = $(LIB_EXPAT) $(LIB_PBF) $(LIB_GD) $(LIB_SQLITE)
 
 .PHONY: all clean install
 
-all: tagstats
+all: tagstats osmstats
+
+osmstats: osmstats.cpp statistics_handler.hpp
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 tagstats: tagstats.cpp tagstats_handler.hpp statistics_handler.hpp string_store.hpp geodistribution.hpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIB_PBF) $(LIB_GD) $(LIB_SQLITE)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 check:
-	cppcheck --enable=all tagstats.cpp
+	cppcheck --enable=all tagstats.cpp osmstats.cpp
 
 indent:
 	astyle --style=java --indent-namespaces --indent-switches --pad-header --suffix=none \*.hpp \*.cpp
@@ -56,5 +59,5 @@ install:
 	install -m 755 tagstats ../sources/db/tagstats
 
 clean:
-	rm -f *.o core tagstats
+	rm -f *.o core tagstats osmstats
 
