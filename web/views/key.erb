@@ -61,14 +61,17 @@
             <div style="background-image: url(<%= TaginfoConfig.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
                 <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>" style="position: absolute;"/>
                 <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+                <br><small><a href="http://en.wikipedia.org/wiki/File:Switzerland_relief_location_map.jpg">Map</a> by Eric Gaba and NordNordWest, <a href="http://creativecommons.org/licenses/by-sa/3.0/deed.en">CCbySA 3.0</a></small>
             </div>
         <% elsif @filter_type == 'nodes' %>
             <div style="background-image: url(<%= TaginfoConfig.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
                 <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+                <br><small><a href="http://en.wikipedia.org/wiki/File:Switzerland_relief_location_map.jpg">Map</a> by Eric Gaba and NordNordWest, <a href="http://creativecommons.org/licenses/by-sa/3.0/deed.en">CCbySA 3.0</a></small>
             </div>
         <% elsif @filter_type == 'ways' %>
             <div style="background-image: url(<%= TaginfoConfig.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
                 <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+                <br><small><a href="http://en.wikipedia.org/wiki/File:Switzerland_relief_location_map.jpg">Map</a> by Eric Gaba and NordNordWest, <a href="http://creativecommons.org/licenses/by-sa/3.0/deed.en">CCbySA 3.0</a></small>
             </div>
         <% elsif @filter_type == 'relations' %>
             <p class="empty"><%= t.pages.key.geographic_distribution.relations %></p>

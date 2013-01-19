@@ -10,7 +10,7 @@
         // Description that appears if you click on the instance icon in the upper left.
         "description": "This is the Swiss Taginfo instance. It shows only tag information of OSM data within Switzerland. It is updated twice weekly, on Monday and Thursday.",
         // URL path to instance icon in the upper left.
-        "icon": "/img/instance.png",
+        "icon": "/img/logo/ch.png",
         // Contact name and email address.
         "contact": "lonvia@denofr.de",
         // Geographical area this taginfo instance covers.
@@ -19,14 +19,14 @@
     },
     // For the geodistribution map. See the wiki documentation about these settings.
     "geodistribution": {
-        "left": 5.93,
-        "bottom": 45.81,
-        "right": 10.53,
-        "top": 47.81,
-        "width": 690,
-        "height": 300,
+        "left": 5.8,
+        "bottom": 45.75,
+        "right": 10.7,
+        "top": 47.9,
+        "width": 686,
+        "height": 344,
         "scale_image": 1,
-        "background_image": "/img/swissmap.png"
+        "background_image": "/img/swissmap.jpg"
     },
     "xapi": {
         // XAPI/JOSM buttons are disabled if more than this many results are expected
@@ -48,7 +48,7 @@
         // Note that this will NOT work for the "db" source! Well, you can download it,
         // but it will fail later, because the database is changed by the master.sql
         // scripts.
-        "download": "josm potlatch merkaartor wiki",
+        "download": "languages josm potlatch merkaartor wiki",
         // These sources will be created from the actual sources.
         "create": "db",
         "db": {
