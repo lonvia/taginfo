@@ -8,7 +8,7 @@
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2012  Jochen Topf <jochen@remote.org>
+#  Copyright (C) 2013  Jochen Topf <jochen@remote.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@
 #
 #------------------------------------------------------------------------------
 
+require 'cgi'
+
 module MediaWikiAPI
 
     class API
@@ -35,6 +37,7 @@ module MediaWikiAPI
             @port = port
             @path = path
             @headers = {}
+            add_header('User-agent', 'taginfo/1.0 (http://wiki.osm.org/wiki/Taginfo)')
         end
 
         def add_header(name, value)
@@ -42,12 +45,13 @@ module MediaWikiAPI
         end
 
         def build_path(params)
-            @path + params.to_a.map{ |el| el.join('=') }.join('&')
+            @path + params.to_a.map{ |el| CGI::escape(el[0].to_s) + '=' + CGI::escape(el[1].to_s) }.join('&')
         end
 
         def get(params)
             path = build_path(params)
             http = Net::HTTP.start(@host, @port)
+#            puts "Getting path [#{path}]"
             http.get(path, @headers)
         end
 

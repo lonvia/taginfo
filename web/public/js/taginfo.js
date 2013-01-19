@@ -1,19 +1,8 @@
 // taginfo.js
 
-// capitalize a string
-String.prototype.capitalize = function() {
-    return this.substr(0, 1).toUpperCase() + this.substr(1);
-}
-
-// print a number as percent value with two digits after the decimal point
-Number.prototype.print_as_percent = function() {
-    return (this * 100).toFixed(2) + '%';
-};
-
-/* ============================ */
-
 var grids = {},
-    current_grid = '';
+    current_grid = '',
+    up = function() { window.location = '/'; };
 
 /* ============================ */
 
@@ -21,6 +10,10 @@ function init_tipsy() {
     jQuery('*[tipsy]').each(function(index, obj) {
         obj = jQuery(obj);
         obj.tipsy({ opacity: 1, delayIn: 500, gravity: obj.attr('tipsy') });
+    });
+    jQuery('*[tipsy_html]').each(function(index, obj) {
+        obj = jQuery(obj);
+        obj.tipsy({ opacity: 1, delayIn: 500, gravity: obj.attr('tipsy_html'), html: true });
     });
 }
 
@@ -50,15 +43,193 @@ function resize_grid(the_grid) {
 
 /* ============================ */
 
+var bad_chars_for_url = /[.=\/]/;
+
+function url_for_key(key) {
+    var k = encodeURIComponent(key);
+    if (key.match(bad_chars_for_url)) {
+        return '/keys/?key=' + k;
+    } else {
+        return '/keys/' + k;
+    }
+}
+
+function url_for_tag(key, value) {
+    var k = encodeURIComponent(key),
+        v = encodeURIComponent(value);
+    if (key.match(bad_chars_for_url) || value.match(bad_chars_for_url)) {
+        return '/tags/?key=' + k + '&value=' + v;
+    } else {
+        return '/tags/' + k + '=' + v;
+    }
+}
+
+function url_for_rtype(rtype) {
+    var t = encodeURIComponent(rtype);
+    if (rtype.match(bad_chars_for_url)) {
+        return '/relations/?rtype=' + t;
+    } else {
+        return '/relations/' + t;
+    }
+}
+
+function url_for_wiki(title, options) {
+    var path = 'http://wiki.openstreetmap.org/';
+    if (options && options.edit) {
+        return path + 'w/index.php?action=edit&title=' + encodeURIComponent(title);
+    } else {
+        return path + 'wiki/' + encodeURIComponent(title);
+    }
+}
+
+/* ============================ */
+
+var bad_chars_for_keys = '!"#$%&()*+,/;<=>?@[\\]^`{|}~' + "'";
+
+function translate(str, fn) {
+    var result = '';
+
+    for (var i=0; i < str.length; i++) {
+        result += fn(str.charAt(i));
+    }
+
+    return result;
+}
+
+function fmt_key(key) {
+    if (key == '') {
+        return span(texts.misc.empty_string, 'badchar empty');
+    }
+
+    return translate(key, function(c) {
+        if (bad_chars_for_keys.indexOf(c) != -1) {
+            return span(c, 'badchar');
+        } else if (c == ' ') {
+            return span('&#x2423;', 'badchar');
+        } else if (c.match(/\s/)) {
+            return span('&nbsp;', 'whitespace');
+        } else {
+            return c;
+        }
+    });
+}
+
+function fmt_value(value) {
+    if (value == '') {
+        return span(texts.misc.empty_string, 'badchar empty');
+    }
+
+    return value
+            .replace(/ /g, '&#x2423;')
+            .replace(/\s/g, span('&nbsp;', 'whitespace'));
+}
+
+function fmt_rtype(rtype) {
+    if (rtype == '') {
+        return span(texts.misc.empty_string, 'badchar empty');
+    }
+
+    return translate(rtype, function(c) {
+        if (c == ' ') {
+            return span('&#x2423;', 'badchar');
+        } else if (c.match(/\s/)) {
+            return span('&nbsp;', 'whitespace');
+        } else if (c.match(/[a-zA-Z0-9_:]/)) {
+            return c;
+        } else {
+            return span(c, 'badchar');
+        }
+    });
+}
+
+function fmt_role(role) {
+    if (role == '') {
+        return span(texts.misc.empty_string, 'empty');
+    }
+
+    return translate(role, function(c) {
+        if (bad_chars_for_keys.indexOf(c) != -1) {
+            return span(c, 'badchar');
+        } else if (c == ' ') {
+            return span('&#x2423;', 'badchar');
+        } else if (c.match(/\s/)) {
+            return span('&nbsp;', 'whitespace');
+        } else {
+            return c;
+        }
+    });
+}
+
+/* ============================ */
+
+function link_to_key(key, attr) {
+    return link(
+        url_for_key(key),
+        fmt_key(key),
+        attr
+    );
+}
+
+function link_to_value(key, value, attr) {
+    return link(
+        url_for_tag(key, value), 
+        fmt_value(value),
+        attr
+    );
+}
+
+function link_to_tag(key, value, key_attr, value_attr) {
+    return link_to_key(key, key_attr) + '=' + link_to_value(key, value, value_attr);
+}
+
+function link_to_rtype(rtype, attr) {
+    return link(
+        url_for_rtype(rtype),
+        fmt_rtype(rtype),
+        attr
+    );
+}
+
+function link_to_wiki(title, options) {
+    if (title == '') {
+        return '';
+    }
+
+    return link(
+        url_for_wiki(title, options),
+        title,
+        { target: '_blank', 'class': 'extlink' }
+    );
+}
+
+/* ============================ */
+
+function html_escape(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function tag(element, text, attrs) {
-    if (attrs === undefined) {
-        attrs = {}
-    }
     var attributes = '';
-    for (var a in attrs) {
-        attributes += ' ' + a + '="' + attrs[a] + '"';
+    if (attrs !== undefined) {
+        for (var a in attrs) {
+            attributes += ' ' + a + '="' + attrs[a] + '"';
+        }
     }
-    return '<' + element + attributes + '>' + text + '</' + element + '>';
+    if (text === null) {
+        return '<' + element + attributes + '/>';
+    } else {
+        return '<' + element + attributes + '>' + text + '</' + element + '>';
+    }
+}
+
+function style(styles) {
+    var css = '';
+
+    for (var s in styles) {
+        css += html_escape(s) + ':' + html_escape(styles[s]) + ';';
+    }
+
+    return css;
 }
 
 function link(url, text, attrs) {
@@ -69,49 +240,117 @@ function link(url, text, attrs) {
     return tag('a', text, attrs);
 }
 
-function span(text, c) {
-    return tag('span', text, { 'class': c });
+function img(attrs) {
+    return tag('img', null, attrs);
 }
 
-function hover_expand(text) {
-    return span(text, 'overflow');
+function span(text, c) {
+    return tag('span', text, { 'class': c });
 }
 
 function empty(text) {
     return span(text, 'empty');
 }
 
-function print_wiki_link(title, options) {
-    if (title == '') {
-        return '';
+function hover_expand(text) {
+    return span(text, 'overflow');
+}
+
+/* ============================ */
+
+function fmt_wiki_image_popup(image) {
+    if (! image.title) {
+        return empty(texts.misc.no_image);
     }
 
-    if (options && options.edit) {
-        path = 'w/index.php?action=edit&title=' + title;
+    var w = image.width,
+        h = image.height,
+        max_size = 180,
+        thumb_size = w >= h ? max_size : parseInt(max_size / h * w),
+        other_size = (w >= h ? parseInt(max_size / w * h) : max_size) + 2,
+        url = image.thumb_url_prefix + thumb_size + image.thumb_url_suffix;
+
+    if (w < max_size) {
+        url = image.image_url;
     } else {
-        path = 'wiki/' + title;
+        w = thumb_size;
+        h = other_size;
     }
 
-    return link('http://wiki.openstreetmap.org/' + path, title, { target: '_blank', 'class': 'extlink' });
+    return tag('span', link_to_wiki(image.title), {
+        'class': 'overflow',
+        tipsy_html: 's',
+        title: html_escape(tag('div', img({ src: url }), {
+            'class': 'img_popup',
+            style: style({ width: w + 'px', height: h + 'px' })
+        }))
+    });
 }
 
-function print_language(code, native_name, english_name) {
-    return tag('span', code, { 'class': 'lang', title: native_name + ' (' + english_name + ')' }) + ' ' + native_name;
+function fmt_language(code, native_name, english_name) {
+    return tag('span', html_escape(code), {
+        'class': 'lang',
+        title: html_escape(native_name + ' (' + english_name + ')')
+    }) + ' ' + html_escape(native_name);
 }
 
-function print_image(type) {
+function fmt_type_icon(type, on_or_off) {
+    return img({
+        src: '/img/types/' + (on_or_off ? encodeURIComponent(type) : 'none') + '.16.png',
+        alt: on_or_off ? 'yes' : 'no',
+        width: 16,
+        height: 16
+    }) + ' ';
+}
+
+function fmt_josm_value(key, value, value_bool) {
+    return value ? link_to_value(key, value) : value_bool ? (html_escape(value_bool) + ' (Boolean)') : '*';
+}
+
+function fmt_josm_icon(style, icon) {
+    if (!icon) return '';
+
+    return img({
+        src: '/api/4/josm/style/image?style=' + encodeURIComponent(style) + '&image=' + encodeURIComponent(icon),
+        title: html_escape(icon),
+        alt: ''
+    });
+}
+
+function fmt_josm_line(width, color) {
+    var inner = '';
+    if (width > 0) {
+        inner = tag('div', '', {
+            title: color,
+            style: style({ height: width + 'px', 'margin-top': (10 - Math.round(width/2)) + 'px', padding: 0, 'background-color': color })
+        });
+    }
+    return tag('div', inner);
+}
+
+function fmt_josm_area(color) {
+    if (!color) return '';
+
+    return tag('div', '', {
+        title: html_escape(color),
+        style: style({ height: '18px', 'background-color': html_escape(color) })
+    });
+}
+
+function fmt_type_image(type) {
     type = type.replace(/s$/, '');
-    var name;
-    if (type == 'all') {
-        name = texts.misc.all;
-    } else {
-        name = texts.osm[type];
-    }
-    return '<img src="/img/types/' + type + '.16.png" alt="[' + name + ']" title="' + name + '" width="16" height="16"/>';
+    var name = html_escape(texts.osm[type]);
+    return img({
+        src: '/img/types/' + encodeURIComponent(type) + '.16.png',
+        alt: '[' + name + ']',
+        title: name,
+        width: 16,
+        height: 16
+    }) + ' ' + name;
 }
 
-// print a number with thousand separator
-function print_with_ts(value) {
+// format a number with thousand separator
+function fmt_with_ts(value) {
     if (value === null) {
         return '-';
     } else {
@@ -119,9 +358,21 @@ function print_with_ts(value) {
     }
 }
 
-/* ============================ */
+function fmt_as_percent(value) {
+    return (value * 100).toFixed(2) + '%';
+}
 
-function print_key_or_tag_list(list) {
+function fmt_checkmark(value) {
+    return value ? '&#x2714;' : '-';
+}
+
+function fmt_value_with_percent(value, fraction) {
+    return tag('div', fmt_with_ts(value), { 'class': 'value' }) +
+           tag('div', fmt_as_percent(fraction), { 'class': 'fraction' }) +
+           tag('div', '', { 'class': 'bar', style: style({ width: (fraction*100).toFixed() + 'px' }) });
+}
+
+function fmt_key_or_tag_list(list) {
     return jQuery.map(list, function(tag, i) {
         if (tag.match(/=/)) {
             var el = tag.split('=', 2);
@@ -132,119 +383,13 @@ function print_key_or_tag_list(list) {
     }).join(' &bull; ');
 }
 
-function print_prevalent_value_list(key, list) {
+function fmt_prevalent_value_list(key, list) {
     if (list.length == 0) {
         return empty(texts.misc.values_less_than_one_percent);
     }
     return jQuery.map(list, function(item, i) {
-        return link_to_value_with_title(key, item.value, '(' + item.fraction.print_as_percent() + ')');
+        return link_to_value(key, item.value, { tipsy: 'e', title: '(' + fmt_as_percent(item.fraction) + ')' });
     }).join(' &bull; ');
-}
-
-function html_escape(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function url_for_key(key) {
-    var k = encodeURIComponent(key);
-    if (key.match(/[=\/]/)) {
-        return '/keys/?key=' + k;
-    } else {
-        return '/keys/' + k;
-    }
-}
-
-function url_for_tag(key, value) {
-    var k = encodeURIComponent(key),
-        v = encodeURIComponent(value);
-    if (key.match(/[=\/]/) || value.match(/[=\/]/)) {
-        return '/tags/?key=' + k + '&value=' + v;
-    } else {
-        return '/tags/' + k + '=' + v;
-    }
-}
-
-function link_to_value_with_title(key, value, extra) {
-    return link(
-        url_for_tag(key, value),
-        pp_value(value),
-        { title: html_escape(value) + ' ' + extra, tipsy: 'e'}
-    );
-}
-
-function print_value_with_percent(value, fraction) {
-    return '<div class="value">' + print_with_ts(value) +
-     '</div><div class="fraction">' + fraction.print_as_percent() +
-     '</div><div class="bar" style="width: ' + (fraction*100).toFixed() + 'px;"></div>';
-}
-
-var pp_chars = '!"#$%&()*+,-/;<=>?@[\\]^`{|}~' + "'";
-
-function pp_key(key) {
-    if (key == '') {
-        return span(texts.misc.empty_string, 'badchar empty');
-    }
-
-    var result = '',
-        length = key.length;
-
-    for (var i=0; i<length; i++) {
-        var c = key.charAt(i);
-        if (pp_chars.indexOf(c) != -1) {
-            result += span(c, 'badchar');
-        } else if (c == ' ') {
-            result += span('&#x2423;', 'badchar');
-        } else if (c.match(/\s/)) {
-            result += span('&nbsp;', 'whitespace');
-        } else {
-            result += c;
-        }
-    }
-
-    return result;
-}
-
-function pp_value_replace(value) {
-    return value.replace(/ /g, '&#x2423;').replace(/\s/g, span('&nbsp;', 'whitespace'));
-}
-
-function pp_value(value) {
-    if (value == '') {
-        return span(texts.misc.empty_string, 'badchar empty');
-    }
-    return pp_value_replace(value);
-}
-
-function link_to_key(key, highlight) {
-    return link(
-        url_for_key(key),
-        highlight === undefined ?
-            pp_key(key) : 
-            key.replace(new RegExp('(' + highlight + ')', 'gi'), "<b>$1</b>")
-    );
-}
-
-function link_to_value(key, value, highlight) {
-    return link(
-        url_for_tag(key, value), 
-        highlight === undefined ?
-            pp_value(value) :
-            value.replace(new RegExp('(' + highlight + ')', 'gi'), "<b>$1</b>")
-    );
-}
-
-function link_to_tag(key, value) {
-    return link_to_key(key) + '=' + link_to_value(key, value);
-}
-
-function link_to_key_or_tag(key, value) {
-    var link = link_to_key(key);
-    if (value && value != '') {
-        link += '=' + link_to_value(key, value);
-    } else {
-        link += '=*';
-    }
-    return link;
 }
 
 /* ============================ */
@@ -283,6 +428,22 @@ function create_flexigrid(domid, options) {
         grids[domid] = me.flexigrid(jQuery.extend({}, flexigrid_defaults, texts.flexigrid, options, { rp: rp }));
         jQuery('th *[title]').tipsy({ opacity: 1, delayIn: 500, gravity: 's', offset: 3 });
         jQuery('.sDiv input[title]').tipsy({ opacity: 1, delayIn: 500, gravity: 'e' });
+        jQuery('input.qsbox').bind('keydown', function(event) {
+            if (event.which == 27) { // esc
+                this.blur();
+                return false;
+            }
+            if (event.which == 9) { // tab
+                jQuery('input#search').focus();
+                return false;
+            }
+        });
+        jQuery('div.bDiv:visible').bind('click', function(event) {
+            var row = jQuery(event.target).parents('tr');
+            console.log("click", row);
+            jQuery('div.bDiv:visible tr').removeClass('trOver');
+            jQuery(row).addClass('trOver');
+        });
     } else {
         // grid does exist, make sure it has the right size
         resize_grid(domid);
@@ -291,13 +452,25 @@ function create_flexigrid(domid, options) {
 
 function init_tabs(params) {
     return jQuery('#tabs').tabs({
-        show: function(event, ui) { 
+        activate: function (event, ui) { 
             resize_box();
-            if (ui.index != 0 || window.location.hash != '') {
-                window.location.hash = ui.tab.hash;
+            var index = ui.newTab.closest("li").index();
+            if (index != 0 || window.location.hash != '') {
+                window.location.hash = ui.newTab.context.hash;
             }
-            if (ui.tab.hash.substring(1) in create_flexigrid_for) {
-                create_flexigrid_for[ui.tab.hash.substring(1)].apply(this, params);
+            if (ui.newTab.context.hash.substring(1) in create_flexigrid_for) {
+                create_flexigrid_for[ui.newTab.context.hash.substring(1)].apply(this, params);
+            }
+        },
+        create: function (event, ui) { 
+            resize_box();
+            var index = jQuery(this).tabs("option", "selected"),
+                id = jQuery(jQuery(this).children()[index+1]).attr('id');
+            if (index != 0 || window.location.hash != '') {
+                window.location.hash = id;
+            }
+            if (id in create_flexigrid_for) {
+                create_flexigrid_for[id].apply(this, params);
             }
         }
     });
@@ -305,10 +478,78 @@ function init_tabs(params) {
 
 /* ============================ */
 
+function d3_colors() {
+    return ["#1f77b4","#aec7e8","#ff7f0e","#ffbb78","#2ca02c","#98df8a","#d62728","#ff9896","#9467bd","#c5b0d5","#8c564b","#c49c94","#e377c2","#f7b6d2","#7f7f7f","#c7c7c7","#bcbd22","#dbdb8d","#17becf","#9edae5"];
+}
+
+/* ============================ */
+
+function table_up() {
+    var current = jQuery('.trOver:visible');
+    if (current.size() > 0) {
+        var prev = jQuery('div.bDiv:visible tr.trOver').removeClass('trOver').prev();
+        if (prev.size() > 0) {
+            prev.addClass('trOver');
+        } else {
+            jQuery('div.pPrev:visible').click();
+        }
+    } else {
+        jQuery('div.bDiv:visible tr:last').addClass('trOver');
+    }
+}
+
+function table_down() {
+    var current = jQuery('.trOver:visible');
+    if (current.size() > 0) {
+        var next = jQuery('div.bDiv:visible tr.trOver').removeClass('trOver').next();
+        if (next.size() > 0) {
+            next.addClass('trOver');
+        } else {
+            jQuery('div.pNext:visible').click();
+        }
+    } else {
+        jQuery('div.bDiv:visible tr:first').addClass('trOver');
+    }
+}
+
+function table_right() {
+    var current = jQuery('.trOver');
+    if (current.size() > 0) {
+        var link = current.find('a.pref');
+        if (link.size() == 0) {
+            link = current.find('a');
+        }
+        if (link.size() > 0) {
+            window.location = link.attr('href');
+        }
+    }
+}
+
+/* ============================ */
+
+function open_help() {
+    jQuery('#help').dialog({
+        modal: true,
+        resizable: false,
+        title: texts.misc.help,
+        minWidth: 800,
+        minHeight: 400,
+        position: { my: 'top', at: 'top+100' },
+        create: function(event, ui) {
+            jQuery('#help_tabs').tabs();
+        }
+    });
+    return false;
+}
+
+/* ============================ */
+
 jQuery(document).ready(function() {
     jQuery('#javascriptmsg').remove();
 
-    jQuery('select').customStyle();
+    jQuery('select').customSelect();
+
+    jQuery('#help_link').bind('click', open_help);
 
     jQuery.getQueryString = (function(a) {
         if (a == "") return {};
@@ -345,7 +586,84 @@ jQuery(document).ready(function() {
                 window.location = '/keys/' + ui.item.value;
             }
         }
-    }).focus();
+    });
+
+    jQuery(document).bind('keyup', function(event) {
+        if (event.ctrlKey || event.altKey || event.metaKey) {
+            return;
+        }
+        if (event.target == document.body) {
+            if (event.which >= 49 && event.which <= 57) { // digit
+                jQuery("#tabs").tabs("select", event.which - 49);
+            } else {
+                switch (event.which) {
+                    case 63: // ?
+                        open_help();
+                        break;
+                    case 70: // f
+                        jQuery('input.qsbox').focus();
+                        break;
+                    case 72: // h
+                        window.location = '/';
+                        break;
+                    case 75: // k
+                        window.location = '/keys';
+                        break;
+                    case 82: // r
+                        window.location = '/relations';
+                        break;
+                    case 83: // s
+                        jQuery('input#search').focus();
+                        break;
+                    case 84: // t
+                        window.location = '/tags';
+                        break;
+                    case 36: // home
+                        jQuery('div.pFirst:visible').click();
+                        break;
+                    case 33: // page up
+                        jQuery('div.pPrev:visible').click();
+                        break;
+                    case 34: // page down
+                        jQuery('div.pNext:visible').click();
+                        break;
+                    case 35: // end
+                        jQuery('div.pLast:visible').click();
+                        break;
+                    case 37: // arrow left
+                        up();
+                        break;
+                    case 38: // arrow up
+                        table_up();
+                        break;
+                    case 39: // arrow right
+                        table_right();
+                        break;
+                    case 40: // arrow down
+                        table_down();
+                        break;
+                }
+            }
+        }
+    });
+
+    jQuery(document).bind('keydown', function(event) {
+        if (event.target == document.body && event.which == 9) {
+            jQuery('input#search').focus();
+            return false;
+        }
+    });
+
+    jQuery('input#search').bind('keydown', function(event) {
+        if (event.which == 27) { // esc
+            this.blur();
+            return false;
+        }
+        if (event.which == 9) { // tab
+            jQuery('input.qsbox:visible').focus();
+            return false;
+        }
+    });
 
     jQuery(window).resize(function() {
         resize_box();

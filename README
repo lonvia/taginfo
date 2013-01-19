@@ -5,15 +5,15 @@ Taginfo
 Brings together information about OpenStreetMap tags and makes it searchable and browsable.
 
 Documentation: http://wiki.openstreetmap.org/wiki/Taginfo
-Live System: http://taginfo.openstreetmap.de/
+Live System: http://taginfo.openstreetmap.org/
 
 
 FILES
 -----
 
-* sources  - import scripts
+* sources  - Import scripts
 * web      - Web User Interface and API
-* examples - script to use the API
+* examples - Some misc example stuff
 * tagstats - C++ program to create database statistics
 
 
@@ -25,17 +25,10 @@ Uses
     * Sinatra web framework http://www.sinatrarb.com/
     * Rack Contrib Gem (for Rack::JSONP)
     * JSON gem (install with gem, Debian/Ubuntu packages are too old and buggy)
-    * jQuery (www.jquery.com), necessary files are included
-    * Flexigrid (Originally from http://code.google.com/p/flexigrid/
-        http://www.flexigrid.info/ , the version used and included
-        is the one from http://github.com/joto/flexigrid with
-        some bugfixes.)
-
-Icon from:
-    http://www.openclipart.org/detail/20131
+    * curl binary
 
 Debian/Ubuntu packages:
-    rubygems
+    rubygems curl
 
 Gems:
     gem install mongrel rack rack-contrib sinatra json
@@ -55,11 +48,26 @@ WEB USER INTERFACE
 
 You need a 'data' directory in the parent directory of the directory where
 this README is. It must contain the sqlite database files created in the
-data import step or downloaded from http://taginfo.openstreetmap.de/download .
+data import step or downloaded from http://taginfo.openstreetmap.org/download .
 
 To start the web user interface:
 cd web
 ./taginfo.rb
+
+
+JAVASCRIPT
+----------
+
+Taginfo uses the following Javascript libraries:
+* jQuery 1.9.0
+* jQuery UI 1.9.2
+* customSelect (http://adam.co/lab/jquery/customselect/)
+* tipsy (http://onehackoranother.com/projects/jquery/tipsy/)
+* Flexigrid (Originally from http://code.google.com/p/flexigrid/
+    http://www.flexigrid.info/ , the version used and included
+    has some changes and bugfixes.)
+
+All the Javascript and CSS needed is already included.
 
 
 THANKS
@@ -67,6 +75,7 @@ THANKS
 Stefano Tampieri - for the Italian translation
 Ilya Zverev <zverik@textual.ru> - for the Russion translation
 Jocelyn Jaubert <jocelyn.jaubert@gmail.com> - for the French translation
+Jacek Buczyński <jacekzlodzi@gmail.com> - for the Polish translation
 
 
 AUTHOR

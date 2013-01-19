@@ -9,6 +9,7 @@ class Taginfo < Sinatra::Base
     }
 
     api(2, 'db/keys', {
+        :superseded_by => '4/keys/all',
         :description => 'Get list of keys that are in the database or mentioned in any other source.',
         :parameters => { :query => 'Only show keys matching this query (substring match, optional).' },
         :paging => :optional,
@@ -53,7 +54,7 @@ class Taginfo < Sinatra::Base
         res = @db.select('SELECT * FROM db.keys').
             condition_if("key LIKE '%' || ? || '%'", params[:query]).
             conditions(filters).
-            order_by(params[:sortname], params[:sortorder]) { |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.key
                 o.count_all
                 o.count_nodes
@@ -67,7 +68,7 @@ class Taginfo < Sinatra::Base
                 o.length 'length(key)'
                 o.length :key
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         if include_data[:wikipages]
@@ -80,7 +81,7 @@ class Taginfo < Sinatra::Base
             wikipages = @db.select('SELECT key, lang, title, type FROM wiki.wikipages').
                 condition("value IS NULL").
                 condition("key IN (#{ res.map{ |row| "'" + SQLite3::Database.quote(row['key']) + "'" }.join(',') })").
-                order_by([:key, :lang]).
+                order_by([:key, :lang], 'ASC').
                 execute()
 
             wikipages.each do |wp|
@@ -112,8 +113,8 @@ class Taginfo < Sinatra::Base
         end
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| h = {
                 :key                      => row['key'],
@@ -138,6 +139,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/tags', {
+        :superseded_by => '4/tags/popular',
         :description => 'Get list of most often used tags.',
         :parameters => { :query => 'Only show tags matching this query (substring match in key and value, optional).' },
         :paging => :optional,
@@ -164,7 +166,7 @@ class Taginfo < Sinatra::Base
         
         res = @db.select('SELECT * FROM db.selected_tags').
             condition_if("(skey LIKE '%' || ? || '%') OR (svalue LIKE '%' || ? || '%')", params[:query], params[:query]).
-            order_by(params[:sortname], params[:sortorder]) { |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.tag :skey
                 o.tag :svalue
                 o.count_all
@@ -172,12 +174,12 @@ class Taginfo < Sinatra::Base
                 o.count_ways
                 o.count_relations
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :key                      => row['skey'],
@@ -195,6 +197,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/keys/overview', {
+        :superseded_by => '4/key/stats',
         :description => 'Show statistics for nodes, ways, relations and total for this key.',
         :parameters => { :key => 'Tag key (required).' },
         :paging => :no,
@@ -275,6 +278,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/keys/distribution', {
+        :superseded_by => '4/key/distribution/nodes',
         :description => 'Get map with distribution of this key in the database (nodes only).',
         :parameters => { :key => 'Tag key (required).' },
         :result => 'PNG image.',
@@ -293,6 +297,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(3, 'db/keys/distribution/nodes', {
+        :superseded_by => '4/key/distribution/nodes',
         :description => 'Get map with distribution of this key in the database (nodes only).',
         :parameters => { :key => 'Tag key (required).' },
         :result => 'PNG image.',
@@ -311,6 +316,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(3, 'db/keys/distribution/ways', {
+        :superseded_by => '4/key/distribution/ways',
         :description => 'Get map with distribution of this key in the database (ways only).',
         :parameters => { :key => 'Tag key (required).' },
         :result => 'PNG image.',
@@ -329,6 +335,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/keys/values', {
+        :superseded_by => '4/key/values',
         :description => 'Get values used with a given key.',
         :parameters => {
             :key => 'Tag key (required).',
@@ -351,8 +358,8 @@ class Taginfo < Sinatra::Base
         lang = params[:lang] || 'en'
         filter_type = get_filter()
 
-        if params[:sortname] == 'count'
-            params[:sortname] = 'count_' + filter_type
+        if @ap.sortname == 'count'
+            @ap.sortname = ['count_' + filter_type]
         end
 
         (this_key_count, total) = @db.select("SELECT count_#{filter_type} AS count, values_#{filter_type} AS count_values FROM db.keys").
@@ -371,14 +378,14 @@ class Taginfo < Sinatra::Base
             condition("count_#{filter_type} > 0").
             condition('key = ?', key).
             condition_if("value LIKE '%' || ? || '%'", params[:query]).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.value
                 o.count_all
                 o.count_nodes
                 o.count_ways
                 o.count_relations
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         # Read description for tag from wikipages, first in English then in the chosen
@@ -396,8 +403,8 @@ class Taginfo < Sinatra::Base
         end
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total.to_i,
             :data  => res.map{ |row| {
                 :value    => row['value'],
@@ -409,6 +416,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/keys/keys', {
+        :superseded_by => '4/key/combinations',
         :description => 'Find keys that are used together with a given key.',
         :parameters => {
             :key => 'Tag key (required).',
@@ -434,13 +442,13 @@ class Taginfo < Sinatra::Base
         key = params[:key]
         filter_type = get_filter()
 
-        if params[:sortname] == 'to_count'
-            params[:sortname] = 'together_count'
-        elsif params[:sortname] == 'from_count'
-            params[:sortname] = ['from_fraction', 'together_count', 'other_key']
+        if @ap.sortname == 'to_count'
+            @ap.sortname = ['together_count']
+        elsif @ap.sortname == 'from_count'
+            @ap.sortname = ['from_fraction', 'together_count', 'other_key']
         end
 
-        cq = @db.count('db.keypairs')
+        cq = @db.count('db.key_combinations')
         total = (params[:query].to_s != '' ? cq.condition("(key1 = ? AND key2 LIKE '%' || ? || '%') OR (key2 = ? AND key1 LIKE '%' || ? || '%')", key, params[:query], key, params[:query]) : cq.condition('key1 = ? OR key2 = ?', key, key)).
             condition("count_#{filter_type} > 0").
             get_first_value().to_i
@@ -450,21 +458,21 @@ class Taginfo < Sinatra::Base
             get_first_value()
 
         res = (params[:query].to_s != '' ?
-            @db.select("SELECT p.key1 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.keypairs p, db.keys k WHERE p.key1=k.key AND p.key2=? AND (p.key1 LIKE '%' || ? || '%') AND p.count_#{filter_type} > 0
-                    UNION SELECT p.key2 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.keypairs p, db.keys k WHERE p.key2=k.key AND p.key1=? AND (p.key2 LIKE '%' || ? || '%') AND p.count_#{filter_type} > 0", key, params[:query], key, params[:query]) :
-            @db.select("SELECT p.key1 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.keypairs p, db.keys k WHERE p.key1=k.key AND p.key2=? AND p.count_#{filter_type} > 0 
-                    UNION SELECT p.key2 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.keypairs p, db.keys k WHERE p.key2=k.key AND p.key1=? AND p.count_#{filter_type} > 0", key, key)).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            @db.select("SELECT p.key1 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key1=k.key AND p.key2=? AND (p.key1 LIKE '%' || ? || '%') AND p.count_#{filter_type} > 0
+                    UNION SELECT p.key2 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key2=k.key AND p.key1=? AND (p.key2 LIKE '%' || ? || '%') AND p.count_#{filter_type} > 0", key, params[:query], key, params[:query]) :
+            @db.select("SELECT p.key1 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key1=k.key AND p.key2=? AND p.count_#{filter_type} > 0 
+                    UNION SELECT p.key2 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key2=k.key AND p.key1=? AND p.count_#{filter_type} > 0", key, key)).
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.together_count
                 o.other_key
                 o.from_fraction
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :other_key      => row['other_key'],
@@ -482,7 +490,7 @@ class Taginfo < Sinatra::Base
         
         res = @db.select('SELECT * FROM popular_keys').
             condition_if("key LIKE '%' || ? || '%'", params[:query]).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.key
                 o.scale_count
                 o.scale_user
@@ -491,12 +499,12 @@ class Taginfo < Sinatra::Base
                 o.scale1
                 o.scale2
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :key         => row['key'],
@@ -511,6 +519,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/tags/overview', {
+        :superseded_by => '4/tag/stats',
         :description => 'Show statistics for nodes, ways, relations and total for this tag.',
         :parameters => {
             :key => 'Tag key (required).',
@@ -590,6 +599,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'db/tags/combinations', {
+        :superseded_by => '4/tag/combinations',
         :description => 'Find keys and tags that are used together with a given tag.',
         :parameters => {
             :key => 'Tag key (required).',
@@ -618,15 +628,15 @@ class Taginfo < Sinatra::Base
         value = params[:value]
         filter_type = get_filter()
 
-        if params[:sortname] == 'to_count'
-            params[:sortname] = 'together_count'
-        elsif params[:sortname] == 'from_count'
-            params[:sortname] = ['from_fraction', 'together_count', 'other_key', 'other_value']
-        elsif params[:sortname] == 'other_tag'
-            params[:sortname] = ['other_key', 'other_value']
+        if @ap.sortname == 'to_count'
+            @ap.sortname = ['together_count']
+        elsif @ap.sortname == 'from_count'
+            @ap.sortname = ['from_fraction', 'together_count', 'other_key', 'other_value']
+        elsif @ap.sortname == 'other_tag'
+            @ap.sortname = ['other_key', 'other_value']
         end
 
-        cq = @db.count('db.tagpairs')
+        cq = @db.count('db.tag_combinations')
         total = (params[:query].to_s != '' ?
                 cq.condition("(key1=? AND value1=? AND (key2 LIKE '%' || ? || '%' OR value2 LIKE '%' || ? || '%')) OR (key2=? AND value2=? AND (key1 LIKE '%' || ? || '%' OR value2 LIKE '%' || ? || '%'))",
                     key, value, params[:query], params[:query], key, value, params[:query], params[:query]) :
@@ -640,26 +650,26 @@ class Taginfo < Sinatra::Base
             get_first_value()
 
         res = (params[:query].to_s != '' ?
-            @db.select("SELECT p.key1 AS other_key, p.value1 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.selected_tags k WHERE p.key1=k.skey AND p.value1=k.svalue AND k.svalue != '' AND p.key2=? AND p.value2=? AND ((p.key1 LIKE '%' || ? || '%') OR (p.value1 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0
-                    UNION SELECT p.key1 AS other_key, p.value1 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.keys k WHERE p.key1=k.key AND p.value1='' AND p.key2=? AND p.value2=? AND ((p.key1 LIKE '%' || ? || '%') OR (p.value1 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0
-                    UNION SELECT p.key2 AS other_key, p.value2 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.selected_tags k WHERE p.key2=k.skey AND p.value2=k.svalue AND k.svalue != '' AND p.key1=? AND p.value1=? AND ((p.key2 LIKE '%' || ? || '%') OR (p.value2 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0
-                    UNION SELECT p.key2 AS other_key, p.value2 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.keys k WHERE p.key2=k.key AND p.value2='' AND p.key1=? AND p.value1=? AND ((p.key2 LIKE '%' || ? || '%') OR (p.value2 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0", key, value, params[:query], params[:query], key, value, params[:query], params[:query], key, value, params[:query], params[:query], key, value, params[:query], params[:query]) :
-            @db.select("SELECT p.key1 AS other_key, p.value1 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.selected_tags k WHERE p.key1=k.skey AND p.value1=k.svalue AND k.svalue != '' AND p.key2=? AND p.value2=? AND p.count_#{filter_type} > 0 
-                    UNION SELECT p.key1 AS other_key, '' AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.keys k WHERE p.key1=k.key AND p.value1 = '' AND p.key2=? AND p.value2=? AND p.count_#{filter_type} > 0 
-                    UNION SELECT p.key2 AS other_key, p.value2 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.selected_tags k WHERE p.key2=k.skey AND p.value2=k.svalue AND k.svalue != '' AND p.key1=? AND p.value1=? AND p.count_#{filter_type} > 0
-                    UNION SELECT p.key2 AS other_key, '' AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tagpairs p, db.keys k WHERE p.key2=k.key AND p.value2 = '' AND p.key1=? AND p.value1=? AND p.count_#{filter_type} > 0", key, value, key, value, key, value, key, value)).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            @db.select("SELECT p.key1 AS other_key, p.value1 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.selected_tags k WHERE p.key1=k.skey AND p.value1=k.svalue AND k.svalue != '' AND p.key2=? AND p.value2=? AND ((p.key1 LIKE '%' || ? || '%') OR (p.value1 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0
+                    UNION SELECT p.key1 AS other_key, p.value1 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.keys k WHERE p.key1=k.key AND p.value1='' AND p.key2=? AND p.value2=? AND ((p.key1 LIKE '%' || ? || '%') OR (p.value1 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0
+                    UNION SELECT p.key2 AS other_key, p.value2 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.selected_tags k WHERE p.key2=k.skey AND p.value2=k.svalue AND k.svalue != '' AND p.key1=? AND p.value1=? AND ((p.key2 LIKE '%' || ? || '%') OR (p.value2 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0
+                    UNION SELECT p.key2 AS other_key, p.value2 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.keys k WHERE p.key2=k.key AND p.value2='' AND p.key1=? AND p.value1=? AND ((p.key2 LIKE '%' || ? || '%') OR (p.value2 LIKE '%' || ? || '%')) AND p.count_#{filter_type} > 0", key, value, params[:query], params[:query], key, value, params[:query], params[:query], key, value, params[:query], params[:query], key, value, params[:query], params[:query]) :
+            @db.select("SELECT p.key1 AS other_key, p.value1 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.selected_tags k WHERE p.key1=k.skey AND p.value1=k.svalue AND k.svalue != '' AND p.key2=? AND p.value2=? AND p.count_#{filter_type} > 0 
+                    UNION SELECT p.key1 AS other_key, '' AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.keys k WHERE p.key1=k.key AND p.value1 = '' AND p.key2=? AND p.value2=? AND p.count_#{filter_type} > 0 
+                    UNION SELECT p.key2 AS other_key, p.value2 AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.selected_tags k WHERE p.key2=k.skey AND p.value2=k.svalue AND k.svalue != '' AND p.key1=? AND p.value1=? AND p.count_#{filter_type} > 0
+                    UNION SELECT p.key2 AS other_key, '' AS other_value, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.tag_combinations p, db.keys k WHERE p.key2=k.key AND p.value2 = '' AND p.key1=? AND p.value1=? AND p.count_#{filter_type} > 0", key, value, key, value, key, value, key, value)).
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.together_count
                 o.other_key
                 o.other_value
                 o.from_fraction
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :other_key      => row['other_key'],

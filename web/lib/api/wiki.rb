@@ -1,25 +1,6 @@
 # web/lib/api/wiki.rb
 class Taginfo < Sinatra::Base
 
-    def get_wiki_result(res)
-        return res.map{ |row| {
-                :lang             => h(row['lang']),
-                :language         => h(::Language[row['lang']].native_name),
-                :language_en      => h(::Language[row['lang']].english_name),
-                :title            => h(row['title']),
-                :description      => h(row['description']),
-                :image            => h(row['image']),
-                :on_node          => row['on_node'].to_i     == 1 ? true : false,
-                :on_way           => row['on_way'].to_i      == 1 ? true : false,
-                :on_area          => row['on_area'].to_i     == 1 ? true : false,
-                :on_relation      => row['on_relation'].to_i == 1 ? true : false,
-                :tags_implies     => row['tags_implies'    ].split(','),
-                :tags_combination => row['tags_combination'].split(','),
-                :tags_linked      => row['tags_linked'     ].split(',')
-            }
-        }.to_json
-    end
-
     api(2, 'wiki/keys') do
         key = params[:key]
 
@@ -35,15 +16,15 @@ class Taginfo < Sinatra::Base
 
             res = @db.select('SELECT key, langs FROM wiki.wikipages_keys').
                 condition_if("key LIKE '%' || ? || '%'", params[:query]).
-                order_by(params[:sortname], params[:sortorder]){ |o|
+                order_by(@ap.sortname, @ap.sortorder){ |o|
                     o.key
                 }.
-                paging(params[:rp], params[:page]).
+                paging(@ap).
                 execute()
 
             return {
-                :page  => params[:page].to_i,
-                :rp    => params[:rp].to_i,
+                :page  => @ap.page,
+                :rp    => @ap.results_per_page,
                 :total => total,
                 :data  => res.map{ |row|
                     lang_hash = Hash.new

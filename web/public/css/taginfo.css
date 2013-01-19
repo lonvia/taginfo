@@ -53,9 +53,18 @@ p {
     max-width: 60em;
 }
 
-p.emphasis {
+.emphasis {
     font-weight: bold;
     font-size: 110%;
+}
+
+div#javascriptmsg {
+    position: absolute;
+    top: 0px;
+    left: 380px;
+    background-color: #f08080;
+    padding: 10px;
+    margin: 20px 40px;
 }
 
 iframe {
@@ -148,7 +157,7 @@ span.disabled {
 
 /* ========== */
 
-span.customStyleSelectBox { 
+span.customSelect { 
     margin: 0;
     padding: 1px 4px 0 4px;
     border:1px solid #a0a0a0;
@@ -158,9 +167,7 @@ span.customStyleSelectBox {
     text-align: left;
 }
 
-span.customStyleSelectBox.changed { }
-
-.customStyleSelectBoxInner {
+.customSelectInner {
     background:url(/img/arrow.png) no-repeat center right;
 }
 
@@ -197,10 +204,11 @@ select#locale, select#lang {
     border: none;
 }
 
-input#search {
+input#search, p.search {
     background-image: url('/css/flexigrid/images/magnifier.png');
     background-repeat: no-repeat;
     background-position: right 3px;
+    background-color: #ffffff;
     height: 18px;
     width: 228px;
     padding: 2px;
@@ -283,7 +291,6 @@ table.boxes td.box {
     font-size: 90%;
     background-color: #ddddd4;
     padding: 8px;
-    margin-bottom: 10px;
     border-radius: 4px;
 }
 
@@ -469,7 +476,7 @@ table.desc {
     width: 100%;
 }
 
-table.desc th {
+table.desc > tbody > tr > th {
     text-align: left;
     vertical-align: top;
     font-weight: normal;
@@ -477,15 +484,106 @@ table.desc th {
     padding: 2px;
 }
 
-table.desc td {
+table.desc > tbody > tr > td {
     vertical-align: top;
-    background-color: #ffffff;
-    padding: 2px;
+    background-color: #e8e8e4;
+    padding: 2px 4px;
+}
+
+table.apiresults {
+}
+
+table.apiresults td {
+    font-size: 80%;
+    padding: 2px 4px;
+    line-height: 100%;
 }
 
 /* ==========  */
 
 div.hDiv table th span {
     display: block;
+}
+
+/* ==========  */
+
+.good {
+    color: #00a000;
+}
+
+.okay {
+}
+
+.bad {
+    color: #ff0000;
+}
+
+/* ==========  */
+
+div#help {
+    display: none;
+}
+
+table.help_table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.help_table td {
+    vertical-align: top;
+    padding: 2px 6px 2px 0;
+}
+
+table.help_table th {
+    padding-bottom: 10px;
+    text-align: left;
+}
+
+span.key {
+    position: relative;
+    top: -1px;
+    border: 1px solid #e8e8e8;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    font-family: monospace;
+}
+
+p.search {
+    margin: 0 0 16px 0;
+}
+
+/* ==========  */
+
+div.wiki_image {
+    float: right;
+}
+
+div.wiki_image img {
+    border: 1px solid #a0a0a0;
+    border-radius: 4px;
+    padding: 1px;
+}
+
+div.img_popup {
+    background-image: url(/img/indicator.gif);
+    background-position: center center;
+    background-repeat: no-repeat;
+}
+
+/* ==========  */
+
+.canvas svg text {
+    font: 12px Arial,sans-serif;
+}
+
+.canvas .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.canvas .axis path {
+  display: none;
 }
 

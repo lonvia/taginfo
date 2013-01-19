@@ -12,6 +12,15 @@ osm:
     ways: Ways
     relation: Relation
     relations: Relations
+    relation_type: Relation type
+    relation_types: Relation types
+    relation_member: Relation member
+    relation_members: Relation members
+    relation_member_nodes: Member nodes
+    relation_member_ways: Member ways
+    relation_member_relations: Member relations
+    relation_member_role: Role
+    relation_member_roles: Roles
     object: Object
     objects: Objects
     all: All
@@ -33,6 +42,7 @@ taginfo:
     test: Test
     map: Map
     maps: Maps
+    relations: Relations
     combinations: Combinations
     key_combinations: Combinations
     overview: Overview
@@ -54,6 +64,7 @@ misc:
     all: All
     object_type: Type
     description: Description
+    help: Help
     length: Length
     icon: Icon
     line: Line
@@ -71,13 +82,62 @@ misc:
     in_wiki_tooltip: Key has at least one wiki page.
     in_josm_tooltip: Key appears in JOSM config.
 
-pages:
-    index:
+help:
+    search:
+        title: Search
+        intro: Use the search box in the upper right corner to search for tag keys and values.
+        string: You can search for tag keys and values
+        substring: Just part of the key/value also works
+        complete_tags: You can search for complete tags
+        values_only: You can also search for tag values only
+        suggestions: |
+            For your convenience popular keys and tags will be suggested
+            while you type. Use your cursor keys to choose one and hit
+            <span class="key">Enter</span>.
+            You will jump directly to that key or tag page.
+    keyboard:
+        title: Keyboard shortcuts
+        site_navigation: Site navigation
+        page_navigation: Page navigation
+        table_navigation: Table navigation
         keys:
-            intro: |
-                Here are some of the more common tag keys:
-            listkeys: See list of all keys...
-            listtags: See list of the most common tags...
+            home: Home
+            end: End
+            pageup: PgUp
+            pagedown: PgDn
+            esc: Esc
+            tab: TAB
+        home_page: Home page
+        keys_page: Keys page
+        tags_page: Tags page
+        relations_page: Relations page
+        first_page: First page
+        prev_page: Previous page
+        next_page: Next page
+        last_page: Last page
+        help_page: This help
+        activate_search: Activate search input
+        activate_filter: Activate filter input field
+        prev_entry: Previous entry
+        next_entry: Next entry
+        enter_entry: Jump to entry
+        switch_tab: Switch tab
+        deactivate: Deactivate input fields
+        up: Up in page hierarchy
+        switch_input: Switch between input fields
+
+pages:
+    not_found:
+        title: Not found
+        intro: Sorry, we could not find the page you were looking for.
+    index:
+        popular_keys: Some popular keys
+        keys:
+            listkeys: See all keys...
+        tags:
+            listtags: See most common tags...
+        relations:
+            listrelations: See all relation types...
         reports:
             listreports: See all reports...
         about:
@@ -120,15 +180,26 @@ pages:
     search:
         title: Search results
         you_were_searching_for: You were searching for
+        fulltext: Full text
         no_keys: No keys found.
         no_values: No values found.
         no_tags: No tags found.
+        no_match: No matches.
     keys:
         intro: |
                 This table shows all tag keys that exist in the database or in any of the other sources.
     tags:
         intro: |
                 This table shows the most common tags in the database.
+    relations:
+        name: Relation types
+        intro: Information about the different types of relations (indicated by the <a href="/keys/type?filter=relations">type</a> tag).
+        relations_of_type_tooltip: Number of relations of this type (and as percentage of all relations).
+        prevalent_roles: Prevalent roles
+        prevalent_roles_tooltip: Prevalent roles for this type of relation.
+        no_information: No information
+        roles_less_than_one_percent: no roles with more than 1%
+        empty_role: empty role
     key:
         description_from_wiki: Description of this key from the wiki (if available in your chosen language, otherwise in English).
         no_description_in_wiki: No description for this key in the wiki.
@@ -179,7 +250,6 @@ pages:
             to_count_tooltip: Number of objects with this tag that also have the other tag/key.
             other_key_tooltip: Tags/Keys used together with this tag.
             from_count_tooltip: Number of objects with other tag/key that also have this tag.
-            none_found: No combinations found (only checked the most common ones).
         combinations:
             title: Combinations
             description: This table shows only the most common combinations of the most common tags.
@@ -197,6 +267,27 @@ pages:
             choice: |
                   Choose style:
             no_styles: No JOSM styles for this tag.
+    relation:
+        name: Relation type
+        description_from_wiki: Description of this relation type from the wiki (if available in your chosen language, otherwise in English).
+        no_description_in_wiki: No description for this relation type in the wiki.
+        overview:
+            tab: Overview
+            title: Overview
+            member_type: Member type
+            member_count: Number of members
+            see_also: See also the tag page
+        roles:
+            tab: Roles
+            title: Member roles
+            objects_tooltip: Relation members with this role (and as percentage of all members) for this relation type.
+            nodes_tooltip: Relation members of type node with this role (and as percentage of all members of type node) for this relation type.
+            ways_tooltip: Relation members of type way with this role (and as percentage of all members of type way) for this relation type.
+            relations_tooltip: Relation members of type relation with this role (and as percentage of all members of type relation) for this relation type.
+            no_roles_info: There is no information about roles for this relation type (most likely because there are only very few of those relations).
+        graph:
+            tab: Roles Graph
+            title: Roles Graph
 
 flexigrid:
     pagetext: Page
@@ -325,4 +416,37 @@ reports:
             added the documentation in the wiki as preparation for using a key or the wiki
             page documents a now obsolete key), but it can also be a typo or other error.</p>
         wiki_pages: Wiki pages
+    name_tags:
+        name: Variants of name tags
+        intro: |
+            <p>This report shows information related to the naming of objects in OSM
+            using the <tt>name</tt> tag and its variants.</p>
+        overview:
+            tab: Overview
+            title: Overview
+        bcp47:
+            tab: BCP47 Subtags
+            title: BCP47 Subtags
+            filter:
+                label: Show only subtags of type
+                all: All
+                language: Language
+                script: Script
+                region: Region
+                variant: Variant
+            intro: |
+                <p>The <a href="http://www.ietf.org/">IETF</a> defines <i>language
+                tags</i> in its standard
+                <a href="http://tools.ietf.org/html/bcp47">Tags for Identifying Languages
+                (BCP47)</a>. Language
+                tags consist of one or more <i>subtags</i> describing the language,
+                script, variants, etc. The following list shows the subtags currently
+                registered that are relevant for OSM. For more information see also the
+                <a href="http://en.wikipedia.org/wiki/IETF_language_tag">Wikipedia
+                entry on IETF language tags</a> and the <a
+                href="http://www.langtag.net/">langtag.net</a> site.</p>
+                <p>Note that the data shown in this table is <b>not</b> from OpenStreetMap,
+                it just shows the building blocks that can be used to describe languages
+                irrespective of whether they are actually used in OSM.
+                </p>
 

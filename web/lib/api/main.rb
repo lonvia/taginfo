@@ -2,6 +2,7 @@
 class Taginfo < Sinatra::Base
 
     api(2, 'site', {
+        :superseded_by => '4/site',
         :description => 'Get information about this taginfo site.',
         :result => {
             :url         => :STRING,

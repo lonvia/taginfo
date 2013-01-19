@@ -6,18 +6,39 @@ module SQL
     # Wrapper for a database connection.
     class Database
 
-        def initialize(dir)
-            filename = dir + '/taginfo-master.db'
+        # This has to be called once to initialize the context for the database
+        def self.init(dir)
+            @@dir = dir
+
+            db = SQL::Database.new
+
+            db.select('SELECT * FROM sources ORDER BY no').execute().each do |source|
+                Source.new(source['id'], source['name'], source['data_until'], source['update_start'], source['update_end'], source['visible'].to_i == 1)
+            end
+
+            data_until = db.select("SELECT min(data_until) FROM sources").get_first_value().sub(/:..$/, '')
+
+            db.close
+
+            data_until
+        end
+
+        def initialize
+            filename = @@dir + '/taginfo-master.db'
             @db = SQLite3::Database.new(filename)
             @db.results_as_hash = true
-
-            [:db, :wiki, :josm, :potlatch, :merkaartor, :search].each do |dbname|
-                @db.execute("ATTACH DATABASE '#{dir}/taginfo-#{dbname}.db' AS #{dbname}")
-            end
 
             @db.execute('SELECT * FROM languages') do |row|
                 Language.new(row)
             end
+        end
+
+        def attach_sources
+            Source.each do |source|
+                @db.execute("ATTACH DATABASE ? AS ?", "#{ @@dir }/#{ source.dbname }", source.id.to_s)
+            end
+            @db.execute("ATTACH DATABASE ? AS search", "#{ @@dir }/taginfo-search.db")
+            self
         end
 
         def close
@@ -85,7 +106,7 @@ module SQL
             self
         end
 
-        def order_by(values, direction='ASC', &block)
+        def order_by(values, direction, &block)
             if values.is_a?(Array)
                 values = values.compact
             else
@@ -94,13 +115,8 @@ module SQL
 
             o = Order.new(values, &block)
 
-            if direction.nil?
-                direction = 'ASC'
-            else
-                direction = direction.to_s
-                if direction !~ /^(asc|desc)$/i
-                    raise ArgumentError, 'direction must be ASC or DESC'
-                end
+            if direction != 'ASC' && direction != 'DESC'
+                raise ArgumentError, 'direction must be ASC or DESC'
             end
 
             values.each do |value|
@@ -113,7 +129,7 @@ module SQL
             unless values.empty?
                 @order_by = "ORDER BY " + values.map{ |value|
                     value = o.default if value.nil?
-                    o[value.to_s].map{ |oel| oel.to_s(direction.upcase) }.join(',')
+                    o[value.to_s].map{ |oel| oel.to_s(direction) }.join(',')
                 }.join(',')
             end
 
@@ -125,15 +141,9 @@ module SQL
             self
         end
 
-        def paging(results_per_page, page)
-            unless results_per_page.nil? || page.nil?
-                if results_per_page !~ /^[0-9]{1,3}$/
-                    raise ArgumentError, 'results per page must be integer between 0 and 999'
-                end
-                if page !~ /^[0-9]{1,4}$/
-                    raise ArgumentError, 'page must be integer between 0 and 9999'
-                end
-                limit(results_per_page.to_i, results_per_page.to_i * (page.to_i - 1))
+        def paging(ap)
+            if ap.do_paging?
+                limit(ap.results_per_page, ap.first_result)
             end
             self
         end

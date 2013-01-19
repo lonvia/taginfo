@@ -25,8 +25,10 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <map>
 
 #include <google/sparse_hash_map>
+#include <boost/foreach.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 
@@ -151,7 +153,7 @@ public:
 #endif // TAGSTATS_COUNT_USERS
     }
 
-    void add_key_combination(const char* other_key, osm_object_id_t type) {
+    void add_key_combination(const char* other_key, osm_object_type_t type) {
         key_combination_hash[other_key].count[type]++;
     }
 
@@ -172,7 +174,7 @@ public:
     KeyValueStats() : m_key_value_combination_hash() {
     }
 
-    void add_key_combination(const char* other_key, osm_object_id_t type) {
+    void add_key_combination(const char* other_key, osm_object_type_t type) {
         m_key_value_combination_hash[other_key].count[type]++;
     }
 
@@ -180,6 +182,57 @@ public:
 
 typedef google::sparse_hash_map<const char *, KeyValueStats *, djb2_hash, eqstr> key_value_hash_map_t;
 #endif // TAGSTATS_COUNT_TAG_COMBINATIONS
+
+struct RelationRoleStats {
+    uint32_t node;
+    uint32_t way;
+    uint32_t relation;
+};
+
+class RelationTypeStats {
+
+public:
+
+    uint64_t m_count;
+    uint64_t m_node_members;
+    uint64_t m_way_members;
+    uint64_t m_relation_members;
+
+    std::map<std::string, RelationRoleStats> m_role_counts;
+
+    RelationTypeStats() :
+        m_count(0),
+        m_node_members(0),
+        m_way_members(0),
+        m_relation_members(0),
+        m_role_counts() {
+    }
+
+    void add(const Osmium::OSM::Relation& relation) {
+        m_count++;
+
+        BOOST_FOREACH(const Osmium::OSM::RelationMember& member, relation.members()) {
+            RelationRoleStats& r = m_role_counts[member.role()];
+            switch (member.type()) {
+                case 'n':
+                    ++r.node;
+                    ++m_node_members;
+                    break;
+                case 'w':
+                    ++r.way;
+                    ++m_way_members;
+                    break;
+                case 'r':
+                    ++r.relation;
+                    ++m_relation_members;
+                    break;
+            }
+        }
+    }
+
+}; // class RelationTypeStats
+
+typedef std::map<std::string, RelationTypeStats> relation_type_stats_map_t;
 
 /**
  * Osmium handler that creates statistics for Taginfo.
@@ -199,6 +252,8 @@ class TagStatsHandler : public Osmium::Handler::Base {
 #ifdef TAGSTATS_COUNT_TAG_COMBINATIONS
     key_value_hash_map_t m_key_value_stats;
 #endif // TAGSTATS_COUNT_TAG_COMBINATIONS
+
+    relation_type_stats_map_t m_relation_type_stats;
 
     time_t m_max_timestamp;
 
@@ -293,7 +348,7 @@ class TagStatsHandler : public Osmium::Handler::Base {
             }
 
             int size;
-            void *ptr = stat->distribution.create_png(&size);
+            void* ptr = stat->distribution.create_png(&size);
             sum_size += size;
 
             statement_insert_into_key_distributions
@@ -392,7 +447,7 @@ class TagStatsHandler : public Osmium::Handler::Base {
 
 public:
 
-    TagStatsHandler(Sqlite::Database& database, const std::string& tags_list, MapToInt<rough_position_t>& map_to_int) :
+    TagStatsHandler(Sqlite::Database& database, const std::string& tags_list, const std::string& relation_type_list, MapToInt<rough_position_t>& map_to_int) :
         Base(),
         m_max_timestamp(0),
         m_string_store(string_store_size),
@@ -410,6 +465,11 @@ public:
             m_key_value_stats[m_string_store.add(key_value.c_str())] = new KeyValueStats();
         }
 #endif // TAGSTATS_COUNT_TAG_COMBINATIONS
+        std::ifstream relation_type_list_file(relation_type_list.c_str(), std::ifstream::in);
+        std::string type;
+        while (relation_type_list_file >> type) {
+            m_relation_type_stats[type] = RelationTypeStats();
+        }
     }
 
     void node(const shared_ptr<Osmium::OSM::Node const>& node) {
@@ -432,6 +492,14 @@ public:
     void relation(const shared_ptr<Osmium::OSM::Relation const>& relation) {
         statistics_handler.relation(relation);
         collect_tag_stats(*relation);
+
+        const char* type = relation->tags().get_value_by_key("type");
+        if (type) {
+            relation_type_stats_map_t::iterator it = m_relation_type_stats.find(type);
+            if (it != m_relation_type_stats.end()) {
+                it->second.add(*relation);
+            }
+        }
     }
 
     void before_nodes() {
@@ -512,16 +580,24 @@ public:
                 "VALUES (?, ?, ?, ?, ?, ?);");
 
 #ifdef TAGSTATS_COUNT_KEY_COMBINATIONS
-        Sqlite::Statement statement_insert_into_key_combinations(m_database, "INSERT INTO keypairs (key1, key2, " \
+        Sqlite::Statement statement_insert_into_key_combinations(m_database, "INSERT INTO key_combinations (key1, key2, " \
                 "count_all, count_nodes, count_ways, count_relations) " \
                 "VALUES (?, ?, ?, ?, ?, ?);");
 #endif // TAGSTATS_COUNT_KEY_COMBINATIONS
 
 #ifdef TAGSTATS_COUNT_TAG_COMBINATIONS
-        Sqlite::Statement statement_insert_into_tag_combinations(m_database, "INSERT INTO tagpairs (key1, value1, key2, value2, " \
+        Sqlite::Statement statement_insert_into_tag_combinations(m_database, "INSERT INTO tag_combinations (key1, value1, key2, value2, " \
                 "count_all, count_nodes, count_ways, count_relations) " \
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
 #endif // TAGSTATS_COUNT_TAG_COMBINATIONS
+
+        Sqlite::Statement statement_insert_into_relation_types(m_database, "INSERT INTO relation_types (rtype, count, " \
+                "members_all, members_nodes, members_ways, members_relations) " \
+                "VALUES (?, ?, ?, ?, ?, ?);");
+
+        Sqlite::Statement statement_insert_into_relation_roles(m_database, "INSERT INTO relation_roles (rtype, role, " \
+                "count_all, count_nodes, count_ways, count_relations) " \
+                "VALUES (?, ?, ?, ?, ?, ?);");
 
         Sqlite::Statement statement_update_meta(m_database, "UPDATE source SET data_until=?");
 
@@ -641,6 +717,33 @@ public:
             delete stat; // lets make valgrind happy
         }
 #endif // TAGSTATS_COUNT_TAG_COMBINATIONS
+
+        typedef std::pair<const std::string, RelationTypeStats> relation_type_stats_map_iterator_t;
+        typedef std::pair<const std::string, RelationRoleStats> relation_role_stats_map_iterator_t;
+
+        BOOST_FOREACH(relation_type_stats_map_iterator_t it, m_relation_type_stats) {
+            const RelationTypeStats& r = it.second;
+            statement_insert_into_relation_types
+            .bind_text(it.first)                 // column: rtype
+            .bind_int64(r.m_count)               // column: count
+            .bind_int64(r.m_node_members + r.m_way_members + r.m_relation_members)  // column: members_all
+            .bind_int64(r.m_node_members)        // columns: members_nodes
+            .bind_int64(r.m_way_members)         // columns: members_ways
+            .bind_int64(r.m_relation_members)    // columns: members_relations
+            .execute();
+
+            BOOST_FOREACH(relation_role_stats_map_iterator_t roleit, r.m_role_counts) {
+                const RelationRoleStats& rstats = roleit.second;
+                statement_insert_into_relation_roles
+                .bind_text(it.first)             // column: rtype
+                .bind_text(roleit.first)         // column: role
+                .bind_int64(rstats.node + rstats.way + rstats.relation)  // column: count_all
+                .bind_int64(rstats.node)         // column: count_nodes
+                .bind_int64(rstats.way)          // column: count_ways
+                .bind_int64(rstats.relation)     // column: count_relations
+                .execute();
+            }
+        }
 
         m_database.commit();
 

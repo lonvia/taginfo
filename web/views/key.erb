@@ -16,7 +16,7 @@
             <span class="button disabled" title="Button disabled, because there are too many objects with this key">JOSM</span>
         <% end %>
     </div>
-    <h1><%= @key_pp %></h1>
+    <h1></h1>
     <p><%= @desc %></p>
 </div>
 <div id="tabs">
@@ -29,10 +29,15 @@
         <li><a href="#josm"><%= t.sources.josm.name %></a></li>
     </ul>
     <div id="overview">
-        <div style="float: right; text-align: center;">
+        <div style="float: right; text-align: center; padding-left: 20px;">
             <p><%= t.pages.key.overview.distribution_of_values %></p>
             <div class="canvas" id="canvas-values"></div>
         </div>
+<% if @image_url %>
+        <div class="wiki_image">
+            <img src="<%= @image_url %>" alt=""/>
+        </div>
+<% end %>
         <h2><%= t.taginfo.overview %></h2>
         <table id="grid-overview">
         </table>
@@ -54,16 +59,16 @@
         <h2><%= t.pages.key.geographic_distribution.title %></h2>
         <% if @filter_type == 'all' %>
             <div style="background-image: url(<%= TaginfoConfig.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
-                <img class="map" src="/api/3/db/keys/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>" style="position: absolute;"/>
-                <img class="map" src="/api/3/db/keys/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+                <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>" style="position: absolute;"/>
+                <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
             </div>
         <% elsif @filter_type == 'nodes' %>
             <div style="background-image: url(<%= TaginfoConfig.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
-                <img class="map" src="/api/3/db/keys/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+                <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
             </div>
         <% elsif @filter_type == 'ways' %>
             <div style="background-image: url(<%= TaginfoConfig.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
-                <img class="map" src="/api/3/db/keys/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+                <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
             </div>
         <% elsif @filter_type == 'relations' %>
             <p class="empty"><%= t.pages.key.geographic_distribution.relations %></p>
@@ -87,50 +92,28 @@
                 <option>Standard</option>
             </select>
         </form>-->
-       <table id="grid-josm">
-       </table>
+<% if @josm_count > 0 %>
+        <table id="grid-josm">
+        </table>
+<% else %>
+        <p class="empty"><%= t.pages.key.josm.no_styles %></p>
+<% end %>
     </div>
 </div>
 <iframe id="josmiframe" name="josmiframe"></iframe>
 <% javascript do
     JS.raw(<<"JAVASCRIPT")
 function page_init2() {
-    init_tabs([#{ @key.to_json }, #{ @filter_type.to_json }, #{ r18n.locale.code.to_json }]);
-
-    var data = #{ @prevalent_values.to_json() };
-
-    var w=160, h=440;
-
-    var vis = new pv.Panel()
-        .canvas('canvas-values')
-        .width(w)
-        .height(h + 20);
-
-    var scale = pv.Scale.linear(0, #{ @count_all_values }).range(0, h);
-
-    vis.add(pv.Layout.Stack)
-        .bottom(10)
-        .order('reverse')
-        .layers(data)
-        .x(10)
-        .y(function(d) { return scale(d.count); })
-    .layer.add(pv.Bar)
-        .width(20)
-        .cursor(function() {
-            return this.data().value == '(other)' ? 'default' : 'pointer';
-        })
-        .event('click', function() {
-            if (this.data().value != '(other)') {
-                window.location = url_for_tag(#{ @key_json }, this.data().value);
-            }
-        })
-    .anchor('left')
-        .add(pv.Label)
-        .font('12px Arial,sans-serif')
-        .left(30)
-        .text(function(d) { return d.value; });
-
-    vis.render();
+    var key = #{ @key.to_json };
+    jQuery('h1').html(fmt_key(key));
+    init_tabs([key, #{ @filter_type.to_json }, #{ r18n.locale.code.to_json }]);
+    create_chart({
+        key: key,
+        width: 160,
+        height: 440,
+        max: #{ @count_all_values },
+        data: #{ @prevalent_values.to_json() }
+    });
 }
 JAVASCRIPT
 end

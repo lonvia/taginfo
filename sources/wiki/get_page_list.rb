@@ -70,13 +70,13 @@ end
 def get_page_list(api, namespaceid, options)
     apfrom = ''
     loop do
-        data = api.query(:list => 'allpages', :aplimit => 'max', :apfrom => apfrom, :apnamespace => namespaceid, :apfilterredir => options[:redirect] ? 'redirects' : 'nonredirects')
+        data = api.query(:generator => 'allpages', :gaplimit => 'max', :gapfrom => apfrom, :gapnamespace => namespaceid, :gapfilterredir => options[:redirect] ? 'redirects' : 'nonredirects', :prop => 'info')
 #        pp data
-        data['query']['allpages'].each do |h|
-            yield h['title'].gsub(/\s/, '_')
+        data['query']['pages'].each do |k,v|
+            yield v['touched'], v['title'].gsub(/\s/, '_')
         end
         if data['query-continue']
-            apfrom = data['query-continue']['allpages']['apfrom'].gsub(/\s/, '_')
+            apfrom = data['query-continue']['allpages']['gapfrom'].gsub(/\s/, '_')
 #            puts "apfrom=#{apfrom}"
         else
             return
@@ -89,7 +89,6 @@ end
 dir = ARGV[0] || '.'
 
 api = MediaWikiAPI::API.new('wiki.openstreetmap.org')
-api.add_header('User-agent', 'taginfo/0.1 (jochen@remote.org)')
 
 namespaces = get_namespaces(api)
 
@@ -102,18 +101,18 @@ tagpages = File.open(dir + '/tagpages.list', 'w')
 namespaces.keys.sort.each do |namespace|
     id = namespaces[namespace]
 
-    get_page_list(api, id, :redirect => false) do |page|
-        line = ['page', namespace, page].join("\t")
+    get_page_list(api, id, :redirect => false) do |timestamp, page|
+        line = ['page', timestamp, namespace, page].join("\t")
         allpages.puts line
-        if page =~ /^([^:]+:)?(Key|Tag):(.+)$/
+        if page =~ /^([^:]+:)?(Key|Tag|Relation):(.+)$/
             tagpages.puts line
         end
     end
 
-    get_page_list(api, id, :redirect => true) do |page|
-        line = ['redirect', namespace, page].join("\t")
+    get_page_list(api, id, :redirect => true) do |timestamp, page|
+        line = ['redirect', timestamp, namespace, page].join("\t")
         allpages.puts line
-        if page =~ /^([^:]+:)?(Key|Tag):(.+)$/
+        if page =~ /^([^:]+:)?(Key|Tag|Relation):(.+)$/
             tagpages.puts line
         end
     end

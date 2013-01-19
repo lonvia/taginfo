@@ -1,12 +1,21 @@
 # web/lib/utils.rb
 
-# patches convenience methods into base classes
+# ------------------------------------------------------------------------------
+# patch some convenience methods into base classes
 
 class Fixnum
 
-    # convert to string with this space as thousand separator
+    # convert to string with thin space as thousand separator
     def to_s_with_ts
         self.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1&thinsp;")
+    end
+
+end
+
+class String
+
+    def titlecase
+        self[0,1].upcase + self[1,self.size].downcase
     end
 
 end
@@ -29,10 +38,14 @@ class Numeric
 end
 
 class Float
+
     def round_to(n=0)
         (self * (10.0 ** n)).round * (10.0 ** (-n))
     end
+
 end
+
+# ------------------------------------------------------------------------------
 
 def title
     @title = [] if @title.nil?
@@ -45,6 +58,8 @@ def section(id)
     @section = id.to_s
     @section_title = (@section =~ /^(keys|tags)$/) ? t.osm[@section] : t.taginfo[@section]
 end
+
+# ------------------------------------------------------------------------------
 
 # Escape tag key or value for XAPI according to
 # http://wiki.openstreetmap.org/wiki/XAPI#Escaping
@@ -75,9 +90,16 @@ def external_link(id, title, link, new_window=false)
     %Q{<a id="#{id}" #{target}rel="nofollow" class="extlink" href="#{link}">#{title}</a>}
 end
 
+def wiki_link(title)
+    prefix = 'http://wiki.openstreetmap.org/wiki/'
+    external_link('wikilink_' + title.gsub(%r{[^A-Za-z0-9]}, '_'), title, prefix + title)
+end
+
+# ------------------------------------------------------------------------------
+
 def tagcloud_size(tag)
-    x = tag['scale1'].to_f / 17 / 2 + tag['pos'] / 2
-    (x * 32 + 10).to_i
+    x = tag['scale1'].to_f / 20 + tag['pos'] / 4
+    (x * 40 + 12).to_i
 end
 
 def get_filter
@@ -97,62 +119,7 @@ def get_total(type)
     return @db.stats(key)
 end
 
-# see also web/public/js/taginfo.js
-def pp_key(key)
-    if key == ''
-        return '<span class="badchar empty">empty string</span>'
-    end
-
-    pp_chars = '!"#$%&()*+,-/;<=>?@[\\]^`{|}~' + "'";
-
-    result = ''
-    key.each_char do |c|
-        if (!pp_chars.index(c).nil?)
-            result += '<span class="badchar">' + c + '</span>'
-        elsif (c == ' ')
-            result += '<span class="badchar">&#x2423;</span>'
-        elsif (c.match(/\s/))
-            result += '<span class="whitespace">&nbsp;</span>'
-        else
-            result += c;
-        end
-    end
-
-    return result;
-end
-
-# see also web/public/js/taginfo.js
-def pp_value(value)
-    if value == ''
-        return '<span class="badchar empty">empty string</span>'
-    end
-    return escape_html(value).gsub(/ /, '&#x2423;').gsub(/\s/, '<span class="whitespace">&nbsp;</span>')
-end
-
-def link_to_key(key, tab='')
-    k = escape(key)
-
-    if key.match(/[=\/]/)
-        return '<a href="/keys/?key=' + k + tab + '">' + pp_key(key) + '</a>'
-    else
-        return '<a href="/keys/'      + k + tab + '">' + pp_key(key) + '</a>'
-    end
-end
-
-def link_to_value(key, value)
-    k = escape(key)
-    v = escape(value)
-
-    if key.match(/[=\/]/) || value.match(/[=\/]/)
-        return '<a href="/tags/?key=' + k + '&value=' + v + '">' + pp_value(value) + '</a>'
-    else
-        return '<a href="/tags/' + k + '=' + v + '">' + pp_value(value) + '</a>'
-    end
-end
-
-def link_to_tag(key, value)
-    return link_to_key(key) + '=' + link_to_value(key, value)
-end
+# ------------------------------------------------------------------------------
 
 # Like the 'get' method but will add a redirect for the same path with trailing / added
 def get!(path, &block)
@@ -164,7 +131,86 @@ end
 
 # Like the 'get' method but specific for API calls, includes documentation for API calls
 def api(version, path, doc=nil, &block)
-    APIDoc.new(version, path, doc) unless doc.nil?
+    API.new(version, path, doc) unless doc.nil?
     get("/api/#{version}/#{path}", &block)
+end
+
+# ------------------------------------------------------------------------------
+
+# Used in wiki api calls
+def get_wiki_result(res)
+    return res.map{ |row| {
+            :lang             => h(row['lang']),
+            :language         => h(::Language[row['lang']].native_name),
+            :language_en      => h(::Language[row['lang']].english_name),
+            :title            => h(row['title']),
+            :description      => h(row['description']),
+            :image            => {
+                :title            => h(row['image']),
+                :width            => row['width'].to_i,
+                :height           => row['height'].to_i,
+                :mime             => h(row['mime']),
+                :image_url        => h(row['image_url']),
+                :thumb_url_prefix => h(row['thumb_url_prefix']),
+                :thumb_url_suffix => h(row['thumb_url_suffix'])
+            },
+            :on_node          => row['on_node'].to_i     == 1,
+            :on_way           => row['on_way'].to_i      == 1,
+            :on_area          => row['on_area'].to_i     == 1,
+            :on_relation      => row['on_relation'].to_i == 1,
+            :tags_implies     => row['tags_implies'    ].split(','),
+            :tags_combination => row['tags_combination'].split(','),
+            :tags_linked      => row['tags_linked'     ].split(',')
+        }
+    }.to_json
+end
+
+# Used in josm api calls
+def get_josm_style_rules_result(total, res)
+    return {
+        :page  => @ap.page,
+        :rp    => @ap.results_per_page,
+        :total => total,
+        :data  => res.map{ |row| {
+            :key        => row['k'],
+            :value      => row['v'],
+            :value_bool => row['b'],
+            :rule       => h(row['rule']),
+            :area_color => row['area_color'] ? h(row['area_color'].sub(/^.*#/, '#')) : '',
+            :line_color => row['line_color'] ? h(row['line_color'].sub(/^.*#/, '#')) : '',
+            :line_width => row['line_width'] ? row['line_width'].to_i : 0,
+            :icon       => row['icon_source'] && row['icon_source'] != 'misc/deprecated.png' && row['icon_source'] != 'misc/no_icon.png' ? h(row['icon_source']) : ''
+        } }
+    }.to_json
+end
+
+def paging_results(array)
+    return [
+        [ :total, :INT, 'Total number of results.' ],
+        [ :page,  :INT, 'Result page number (first has page number 1).' ],
+        [ :rp,    :INT, 'Results per page.' ],
+        [ :data,  :ARRAY_OF_HASHES, 'Array with results.', array ]
+    ];
+end
+
+def no_paging_results(array)
+    return [
+        [ :total, :INT, 'Total number of results.' ],
+        [ :data,  :ARRAY_OF_HASHES, 'Array with results.', array ]
+    ];
+end
+
+MAX_IMAGE_WIDTH = 300
+
+def build_image_url(row)
+    w = row['width'].to_i
+    h = row['height'].to_i
+    if w <= MAX_IMAGE_WIDTH
+        return row['image_url']
+    end
+    if w > 0 && h > 0
+        return "#{row['thumb_url_prefix']}#{ h <= w ? MAX_IMAGE_WIDTH : (MAX_IMAGE_WIDTH * w / h).to_i }#{ row['thumb_url_suffix'] }"
+    end
+    return nil
 end
 

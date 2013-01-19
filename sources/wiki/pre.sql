@@ -33,6 +33,36 @@ CREATE TABLE wikipages (
     status           TEXT
 );
 
+DROP TABLE IF EXISTS relation_pages;
+
+CREATE TABLE relation_pages (
+    lang             TEXT,
+    rtype            TEXT,
+    title            TEXT,
+    body             TEXT,
+    tgroup           TEXT,
+    type             TEXT,
+    has_templ        INTEGER,
+    parsed           INTEGER,
+    description      TEXT,
+    image            TEXT,
+    tags_linked      TEXT,
+    status           TEXT
+);
+
+DROP TABLE IF EXISTS wiki_images;
+
+CREATE TABLE wiki_images (
+    image            TEXT,
+    width            INTEGER,
+    height           INTEGER,
+    size             INTEGER,
+    mime             TEXT,
+    image_url        TEXT,
+    thumb_url_prefix TEXT,
+    thumb_url_suffix TEXT
+);
+
 DROP TABLE IF EXISTS wikipages_keys;
 
 CREATE TABLE wikipages_keys (
@@ -62,6 +92,22 @@ DROP TABLE IF EXISTS invalid_page_title;
 CREATE TABLE invalid_page_titles (
     reason TEXT,
     title  TEXT
+);
+
+DROP TABLE IF EXISTS invalid_image_titles;
+
+CREATE TABLE invalid_image_titles (
+    reason      TEXT,
+    page_title  TEXT,
+    image_title TEXT
+);
+
+DROP TABLE IF EXISTS words;
+
+CREATE TABLE words (
+    key   TEXT,
+    value TEXT,
+    words TEXT
 );
 
 DROP TABLE IF EXISTS stats;

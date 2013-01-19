@@ -45,7 +45,8 @@ require 'lib/language.rb'
 require 'lib/sql.rb'
 require 'lib/sources.rb'
 require 'lib/reports.rb'
-require 'lib/apidoc.rb'
+require 'lib/api.rb'
+require 'lib/langtag/bcp47.rb'
 
 #------------------------------------------------------------------------------
 
@@ -53,15 +54,7 @@ TaginfoConfig.read
 
 #------------------------------------------------------------------------------
 
-db = SQL::Database.new('../../data')
-
-db.select('SELECT * FROM sources ORDER BY no').execute().each do |source|
-    Source.new source['id'], source['name'], source['data_until'], source['update_start'], source['update_end'], source['visible'].to_i == 1
-end
-
-DATA_UNTIL = db.select("SELECT min(data_until) FROM sources").get_first_value().sub(/:..$/, '')
-
-db.close
+DATA_UNTIL = SQL::Database.init('../../data');
 
 class Taginfo < Sinatra::Base
 
@@ -109,19 +102,15 @@ class Taginfo < Sinatra::Base
             params[:locale] = request.cookies['taginfo_locale']
         end
 
-        javascript 'jquery-1.5.1.min'
-        javascript 'jquery-ui-1.8.10.custom.min'
-        javascript 'customSelect.jquery-minified'
-        javascript 'jquery.tipsy-minified'
-        javascript 'flexigrid-minified'
+        javascript_for(:common)
+        javascript_for(:taginfo)
         javascript r18n.locale.code + '/texts'
-        javascript 'taginfo'
 
         # set to immediate expire on normal pages
         # (otherwise switching languages doesn't work)
         expires 0, :no_cache
 
-        @db = SQL::Database.new('../../data')
+        @db = SQL::Database.new.attach_sources
 
         @data_until = DATA_UNTIL
     end
@@ -135,6 +124,12 @@ class Taginfo < Sinatra::Base
     before '/api/*' do
         content_type :json
         expires next_update
+        headers['Access-Control-Allow-Origin'] = '*'
+        begin
+            @ap = APIParameters.new(params)
+        rescue ArgumentError => ex
+            halt 412, { :error => ex.message }.to_json
+        end
     end
 
     #-------------------------------------
@@ -155,12 +150,21 @@ class Taginfo < Sinatra::Base
 
     #-------------------------------------
 
-    %w(about download keys sources tags).each do |page|
+    %w(about download sources).each do |page|
         get '/' + page do
-            @title = (page =~ /^(keys|tags)$/) ? t.osm[page] : t.taginfo[page]
+            @title = t.taginfo[page]
             if File.exists?("viewsjs/#{ page }.js.erb")
                 javascript "#{ r18n.locale.code }/#{ page }"
             end
+            erb page.to_sym
+        end
+    end
+
+    %w(keys tags relations).each do |page|
+        get '/' + page do
+            @title = t.osm[page]
+            javascript_for(:flexigrid)
+            javascript "#{ r18n.locale.code }/#{ page }"
             erb page.to_sym
         end
     end
@@ -176,6 +180,13 @@ class Taginfo < Sinatra::Base
 
     #--------------------------------------------------------------------------
 
+    not_found do
+        erb :not_found
+    end
+
+    #--------------------------------------------------------------------------
+
+    # old deprecated API (version 2 and 3)
     load 'lib/api/db.rb'
     load 'lib/api/josm.rb'
     load 'lib/api/main.rb'
@@ -183,8 +194,23 @@ class Taginfo < Sinatra::Base
     load 'lib/api/search.rb'
     load 'lib/api/wiki.rb'
 
+    # current API (version 4)
+    load 'lib/api/v4/josm.rb'
+    load 'lib/api/v4/key.rb'
+    load 'lib/api/v4/keys.rb'
+#    load 'lib/api/v4/langtag.rb'
+    load 'lib/api/v4/relation.rb'
+    load 'lib/api/v4/relations.rb'
+    load 'lib/api/v4/search.rb'
+    load 'lib/api/v4/site.rb'
+    load 'lib/api/v4/tag.rb'
+    load 'lib/api/v4/tags.rb'
+    load 'lib/api/v4/wiki.rb'
+
     load 'lib/ui/embed.rb'
+    load 'lib/ui/help.rb'
     load 'lib/ui/keys_tags.rb'
+    load 'lib/ui/relation.rb'
     load 'lib/ui/reports.rb'
     load 'lib/ui/search.rb'
     load 'lib/ui/taginfo.rb'

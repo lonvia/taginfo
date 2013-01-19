@@ -2,6 +2,7 @@
 class Taginfo < Sinatra::Base
 
     api(2, 'search/values', {
+        :superseded_by => '4/search/by_value',
         :description => 'Search all tag values for string.',
         :parameters => { :q => 'Value to search for (substring search, required).' },
         :sort => %w( count_all key value ),
@@ -22,17 +23,17 @@ class Taginfo < Sinatra::Base
 
         res = @db.select('SELECT * FROM search.ftsearch').
             condition_if("value MATCH ?", query).
-            order_by(params[:sortname], params[:sortorder]) { |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.count_all
                 o.key
                 o.value
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :key       => row['key'],
@@ -58,22 +59,47 @@ class Taginfo < Sinatra::Base
         end
 
         res = sel.
-            order_by(params[:sortname], params[:sortorder]) { |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.count_all
                 o.key
                 o.value
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :key       => row['key'],
                 :value     => row['value'],
                 :count_all => row['count_all'].to_i,
+            }}
+        }.to_json
+    end
+
+    api(2, 'search/wikipages') do
+        query = params[:q].downcase
+
+        total = @db.count('wiki.words').condition("words LIKE ('%' || ? || '%')", query).get_first_value().to_i
+        sel = @db.select("SELECT key, value FROM wiki.words WHERE words LIKE ('%' || ? || '%')", query)
+
+        res = sel.
+            order_by(@ap.sortname, @ap.sortorder) { |o|
+                o.key
+                o.value
+            }.
+            paging(@ap).
+            execute()
+
+        return {
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
+            :total => total,
+            :data  => res.map{ |row| {
+                :key   => row['key'],
+                :value => row['value']
             }}
         }.to_json
     end

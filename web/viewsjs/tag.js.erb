@@ -3,10 +3,20 @@
     misc = @trans.t.misc
     page = @trans.t.pages.tag
  %>
+function link_to_key_or_tag(key, value) {
+    var link = link_to_key(key) + '=';
+    if (value && value != '') {
+        link += link_to_value(key, value, { 'class': 'pref' });
+    } else {
+        link += '*';
+    }
+    return link;
+}
+
 var create_flexigrid_for = {
     overview: function(key, value, filter_type) {
         create_flexigrid('grid-overview', {
-            url: '/api/3/db/tags/overview?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
+            url: '/api/4/tag/stats?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
             colModel: [
                 { display: '<%= misc.object_type %>', name: 'type', width: 100, sortable: true },
                 { display: '<%= page.number_objects %>', name: 'count', width: 260, sortable: true, align: 'center' }
@@ -17,10 +27,10 @@ var create_flexigrid_for = {
                 return {
                     total: 4,
                     page: 1,
-                    rows: jQuery.map(data, function(row, i) {
+                    rows: jQuery.map(data.data, function(row, i) {
                         return { 'cell': [
-                            print_image(row.type) + ' ' + texts.osm[row.type],
-                            print_value_with_percent(row.count, row.count_fraction)
+                            fmt_type_image(row.type),
+                            fmt_value_with_percent(row.count, row.count_fraction)
                         ]};
                     })
                 };
@@ -29,24 +39,23 @@ var create_flexigrid_for = {
     },
     combinations: function(key, value, filter_type) {
         create_flexigrid('grid-combinations', {
-            url: '/api/2/db/tags/combinations?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value) + '&filter=' + encodeURIComponent(filter_type),
+            url: '/api/4/tag/combinations?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value) + '&filter=' + encodeURIComponent(filter_type),
             colModel: [
-                { display: '<span title="<%= page.other_tags_used.to_count_tooltip %>"><%= misc.count %> &rarr;</span>', name: 'to_count', width: 320, sortable: true, align: 'center' },
-                { display: '<span title="<%= page.other_tags_used.other_key_tooltip %>"><%= page.other_tags_used.other %></span>', name: 'other_tag', width: 340, sortable: true },
-                { display: '<span title="<%= page.other_tags_used.from_count_tooltip %>">&rarr; <%= misc.count %></span>', name: 'from_count', width: 320, sortable: true, align: 'center' }
+                { display: '<span title="<%= page.other_tags_used.to_count_tooltip %>"><%= misc.count %> &rarr;</span>', name: 'to_count', width: 260, sortable: true, align: 'center' },
+                { display: '<span title="<%= page.other_tags_used.other_key_tooltip %>"><%= page.other_tags_used.other %></span>', name: 'other_tag', width: 400, sortable: true },
+                { display: '<span title="<%= page.other_tags_used.from_count_tooltip %>">&rarr; <%= misc.count %></span>', name: 'from_count', width: 260, sortable: true, align: 'center' }
             ],
             searchitems: [
                 { display: '<%= page.other_tags_used.other %>', name: 'other_tag' }
             ],
             sortname: 'to_count',
             sortorder: 'desc',
-            emptymsg: '<%= page.other_tags_used.none_found %>',
             preProcess: function(data) {
                 data.rows = jQuery.map(data.data, function(row, i) {
                     return { 'cell': [
-                        print_value_with_percent(row.together_count, row.to_fraction),
+                        fmt_value_with_percent(row.together_count, row.to_fraction),
                         link_to_key_or_tag(row.other_key, row.other_value),
-                        print_value_with_percent(row.together_count, row.from_fraction),
+                        fmt_value_with_percent(row.together_count, row.from_fraction),
                     ] };
                 });
                 return data;
@@ -55,7 +64,7 @@ var create_flexigrid_for = {
     },
     wiki: function(key, value) {
         create_flexigrid('grid-wiki', {
-            url: '/api/2/wiki/tags?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
+            url: '/api/4/tag/wiki_pages?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
             colModel: [
                 { display: '<%= misc.language %>', name: 'lang', width: 150, sortable: false },
                 { display: '<%= page.wiki_pages.wiki_page %>', name: 'title', width: 200, sortable: false, align: 'right' },
@@ -74,17 +83,17 @@ var create_flexigrid_for = {
                     page: 1,
                     rows: jQuery.map(data, function(row, i) {
                         return { 'cell': [
-                            print_language(row.lang, row.language, row.language_en),
-                            print_wiki_link(row.title),
+                            fmt_language(row.lang, row.language, row.language_en),
+                            link_to_wiki(row.title),
                             row.description,
-                            row.image == ''   ? empty('<%= misc.no_image %>') : hover_expand(print_wiki_link(row.image)),
-                            (row.on_node      ? '<img width="16" height="16" src="/img/types/node.16.png"     alt="yes"/>' : '<img width="16" height="16" src="/img/types/none.16.png" alt="no"/>') + ' ' +
-                            (row.on_way       ? '<img width="16" height="16" src="/img/types/way.16.png"      alt="yes"/>' : '<img width="16" height="16" src="/img/types/none.16.png" alt="no"/>') + ' ' +
-                            (row.on_area      ? '<img width="16" height="16" src="/img/types/area.16.png"     alt="yes"/>' : '<img width="16" height="16" src="/img/types/none.16.png" alt="no"/>') + ' ' +
-                            (row.on_relation  ? '<img width="16" height="16" src="/img/types/relation.16.png" alt="yes"/>' : '<img width="16" height="16" src="/img/types/none.16.png" alt="no"/>'),
-                            print_key_or_tag_list(row.tags_implies),
-                            print_key_or_tag_list(row.tags_combination),
-                            print_key_or_tag_list(row.tags_linked)
+                            fmt_wiki_image_popup(row.image),
+                            fmt_type_icon('node',     row.on_node) + 
+                            fmt_type_icon('way',      row.on_way) + 
+                            fmt_type_icon('area',     row.on_area) + 
+                            fmt_type_icon('relation', row.on_relation),
+                            fmt_key_or_tag_list(row.tags_implies),
+                            fmt_key_or_tag_list(row.tags_combination),
+                            fmt_key_or_tag_list(row.tags_linked)
                         ]};
                     })
                 };
@@ -93,23 +102,22 @@ var create_flexigrid_for = {
     },
     josm: function(key, value) {
         create_flexigrid('grid-josm', {
-            url: '/api/2/josm/styles/standard/tags?key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
+            url: '/api/4/tag/josm/style/rules?style=standard&key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value),
             colModel: [
-                { display: '<%= osm.value %>', name: 'v',    width: 400, sortable: false },
+                { display: '<%= osm.value %>', name: 'value', width: 400, sortable: false },
                 { display: '<%= misc.icon %>', name: 'icon', width: 40, sortable: false, align: 'center' },
                 { display: '<%= misc.line %>', name: 'line', width: 40, sortable: false, align: 'center' },
                 { display: '<%= misc.area %>', name: 'area', width: 40, sortable: false, align: 'center' }
             ],
-            sortname: 'v',
+            sortname: 'value',
             sortorder: 'asc',
-            emptymsg: '<%= page.josm.no_styles %>',
             preProcess: function(data) {
                 data.rows = jQuery.map(data.data, function(row, i) {
                     return { 'cell': [
-                        row.v ? link_to_value(row.k, row.v) : row.b ? (row.b + ' (Boolean)') : '*',
-                        row.icon ? '<img src="/api/2/josm/styles/images?style=standard&image=' + row.icon + '" title="' + row.icon + '" alt=""/>' : '',
-                        '<div>' + (row.line_width > 0 ? '<div title="' + row.line_color + '" style="height: ' + row.line_width + 'px; margin-top: ' + (10 - Math.round(row.line_width/2)) + 'px; padding: 0; background-color: ' + row.line_color + '"></div>' : '') + '</div>',
-                        row.area_color ? '<div title="' + row.area_color + '" style="height: 18px; background-color: ' + row.area_color + '"></div>' : ''
+                        fmt_josm_value(row.key, row.value, row.value_bool),
+                        fmt_josm_icon('standard', row.icon),
+                        fmt_josm_line(row.line_width, row.line_color),
+                        fmt_josm_area(row.area_color)
                     ] };
                 });
                 return data;

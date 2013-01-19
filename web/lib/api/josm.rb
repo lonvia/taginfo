@@ -2,6 +2,7 @@
 class Taginfo < Sinatra::Base
 
     api(2, 'josm/styles/images', {
+        :superseded_by => '4/josm/style/image',
         :description => 'Access images for map features used in JOSM.',
         :parameters => { :style => 'JOSM style', :image => 'Image path' },
         :result => 'PNG image.',
@@ -26,8 +27,8 @@ class Taginfo < Sinatra::Base
 
     def get_josm_result(total, res)
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :k => row['k'],
@@ -49,7 +50,7 @@ class Taginfo < Sinatra::Base
 
         res = @db.select('SELECT * FROM josm_style_rules').
             condition_if("k LIKE '%' || ? || '%' OR v LIKE '%' || ? || '%'", params[:query], params[:query]).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.k :k
                 o.k :v
                 o.k :b
@@ -58,7 +59,7 @@ class Taginfo < Sinatra::Base
                 o.v :k
                 o.b
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return get_josm_result(total, res);
@@ -76,12 +77,12 @@ class Taginfo < Sinatra::Base
         res = @db.select('SELECT * FROM josm_style_rules').
             condition('k = ?', key).
             condition_if("v LIKE '%' || ? || '%'", params[:query]).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.v :v
                 o.v :b
                 o.b
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         return get_josm_result(total, res);
@@ -99,8 +100,8 @@ class Taginfo < Sinatra::Base
         res = @db.select('SELECT * FROM josm_style_rules').
             condition('k = ?', key).
             condition('v = ?', value).
-            order_by([:k, :v]).
-            paging(params[:rp], params[:page]).
+            order_by([:k, :v], 'ASC').
+            paging(@ap).
             execute()
 
         return get_josm_result(total, res);

@@ -3,6 +3,7 @@
 class Taginfo < Sinatra::Base
 
     api(2, 'reports/frequently_used_keys_without_wiki_page', {
+        :superseded_by => '4/keys/without_wiki_page',
         :description => 'Return frequently used tag keys that have no associated wiki page.',
         :parameters => {
             :min_count => 'How many tags with this key must there be at least to show up here? (default 10000).',
@@ -44,13 +45,13 @@ class Taginfo < Sinatra::Base
             condition('count_all > ?', min_count).
             condition("in_wiki#{english} = 0").
             condition_if("key LIKE '%' || ? || '%'", params[:query]).
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.key
                 o.count_all
                 o.values_all
                 o.users_all
             }.
-            paging(params[:rp], params[:page]).
+            paging(@ap).
             execute()
 
         reshash = Hash.new
@@ -73,8 +74,8 @@ class Taginfo < Sinatra::Base
         end
 
         return {
-            :page  => params[:page].to_i,
-            :rp    => params[:rp].to_i,
+            :page  => @ap.page,
+            :rp    => @ap.results_per_page,
             :total => total,
             :data  => res.map{ |row| {
                 :key                => row['key'],
@@ -88,6 +89,7 @@ class Taginfo < Sinatra::Base
     end
 
     api(2, 'reports/languages', {
+        :superseded_by => '4/wiki/languages',
         :description => 'List languages Taginfo knows about and how many wiki pages describing keys and tags there are in these languages.',
         :paging => :no,
         :result => {
@@ -104,7 +106,7 @@ class Taginfo < Sinatra::Base
         :ui => '/reports/languages'
     }) do
         res = @db.select('SELECT * FROM languages').
-            order_by(params[:sortname], params[:sortorder]){ |o|
+            order_by(@ap.sortname, @ap.sortorder) { |o|
                 o.code
                 o.native_name
                 o.english_name
@@ -114,7 +116,6 @@ class Taginfo < Sinatra::Base
             execute()
 
         return {
-            :page  => 1,
             :total => res.size,
             :data  => res.map{ |row| {
                 :code                    => row['code'],
