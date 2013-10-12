@@ -243,7 +243,7 @@ class TagStatsHandler : public Osmium::Handler::Base {
      * Tag combination not appearing at least this often are not written
      * to database.
      */
-    static const unsigned int min_tag_combination_count = 1000;
+    unsigned int m_min_tag_combination_count;
 
     time_t timer;
 
@@ -412,18 +412,17 @@ class TagStatsHandler : public Osmium::Handler::Base {
             stat->update(it->value(), object, m_string_store);
 
             if (object.type() == NODE) {
-                try {
-                    stat->distribution.add_coordinate(m_map_to_int(static_cast<const Osmium::OSM::Node&>(object).position()));
-                } catch (std::range_error) {
-                    // ignore
-                }
+                stat->distribution.add_coordinate(m_map_to_int(static_cast<const Osmium::OSM::Node&>(object).position()));
             }
 #ifdef TAGSTATS_GEODISTRIBUTION_FOR_WAYS
             else if (object.type() == WAY) {
                 // This will only add the coordinate of the first node in a way to the
                 // distribution. We'll see how this goes, maybe we need to store the
                 // coordinates of all nodes?
-                stat->distribution.add_coordinate(m_storage[static_cast<const Osmium::OSM::Way&>(object).nodes().front().ref()]);
+                const Osmium::OSM::WayNodeList& wnl = static_cast<const Osmium::OSM::Way&>(object).nodes();
+                if (!wnl.empty()) {
+                    stat->distribution.add_coordinate(m_storage[wnl.front().ref()]);
+                }
             }
 #endif // TAGSTATS_GEODISTRIBUTION_FOR_WAYS
         }
@@ -447,8 +446,9 @@ class TagStatsHandler : public Osmium::Handler::Base {
 
 public:
 
-    TagStatsHandler(Sqlite::Database& database, const std::string& tags_list, const std::string& relation_type_list, MapToInt<rough_position_t>& map_to_int) :
+    TagStatsHandler(Sqlite::Database& database, const std::string& tags_list, const std::string& relation_type_list, MapToInt<rough_position_t>& map_to_int, unsigned int min_tag_combination_count) :
         Base(),
+        m_min_tag_combination_count(min_tag_combination_count),
         m_max_timestamp(0),
         m_string_store(string_store_size),
         m_database(database),
@@ -476,11 +476,7 @@ public:
         statistics_handler.node(node);
         collect_tag_stats(*node);
 #ifdef TAGSTATS_GEODISTRIBUTION_FOR_WAYS
-        try {
-            m_storage.set(node->id(), m_map_to_int(node->position()));
-        } catch (std::range_error) {
-            // ignore
-        }
+        m_storage.set(node->id(), m_map_to_int(node->position()));
 #endif
     }
 
@@ -696,7 +692,7 @@ public:
             for (combination_hash_map_t::const_iterator it = stat->m_key_value_combination_hash.begin(); it != stat->m_key_value_combination_hash.end(); ++it) {
                 const Counter* s = &(it->second);
 
-                if (s->all() >= min_tag_combination_count) {
+                if (s->all() >= m_min_tag_combination_count) {
                     std::vector<std::string> kv2;
                     boost::split(kv2, it->first, boost::is_any_of("="));
                     kv2.push_back(""); // if there is no = in key, make sure there is an empty value

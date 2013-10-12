@@ -9,7 +9,7 @@
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2012  Jochen Topf <jochen@remote.org>
+#  Copyright (C) 2013  Jochen Topf <jochen@remote.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,12 +27,20 @@
 #
 #------------------------------------------------------------------------------
 
+v=RUBY_VERSION.split('.').map{ |x| x.to_i }
+if (v[0]*100+v[1])*100+v[0] < 10901
+    STDERR.puts "You need at least Ruby 1.9.1 to run taginfo"
+    exit(1)
+end
+
+#------------------------------------------------------------------------------
+
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 
-require 'rubygems'
 require 'json'
 require 'sqlite3'
 require 'yaml'
+require 'date'
 
 require 'sinatra/base'
 require 'sinatra/r18n'
@@ -72,6 +80,12 @@ class Taginfo < Sinatra::Base
             set :host, 'localhost'
             set :port, ARGV[0]
             set :environment, :production
+
+            # Disable rack-protection library because it messes up embedding
+            # taginfo in an iframe. This should probably be done more
+            # selectively, but there is no documentation on what rack-protection
+            # is actually doing...
+            disable :protection
         else
             # test
             enable :logging
@@ -198,7 +212,6 @@ class Taginfo < Sinatra::Base
     load 'lib/api/v4/josm.rb'
     load 'lib/api/v4/key.rb'
     load 'lib/api/v4/keys.rb'
-#    load 'lib/api/v4/langtag.rb'
     load 'lib/api/v4/relation.rb'
     load 'lib/api/v4/relations.rb'
     load 'lib/api/v4/search.rb'
@@ -207,13 +220,17 @@ class Taginfo < Sinatra::Base
     load 'lib/api/v4/tags.rb'
     load 'lib/api/v4/wiki.rb'
 
+    # test API (unstable, do not use)
+    load 'lib/api/test/langtag.rb'
+
     load 'lib/ui/embed.rb'
     load 'lib/ui/help.rb'
-    load 'lib/ui/keys_tags.rb'
+    load 'lib/ui/keys.rb'
     load 'lib/ui/relation.rb'
     load 'lib/ui/reports.rb'
     load 'lib/ui/search.rb'
     load 'lib/ui/taginfo.rb'
+    load 'lib/ui/tags.rb'
     load 'lib/ui/test.rb'
 
     # run application

@@ -1,13 +1,13 @@
-#!/usr/bin/perl
+#!/usr/bin/ruby
 #------------------------------------------------------------------------------
 #
 #  Taginfo source: DB
 #
-#  update_characters.pl
+#  update_characters.rb
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2012  Jochen Topf <jochen@remote.org>
+#  Copyright (C) 2013  Jochen Topf <jochen@remote.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,42 +25,37 @@
 #
 #------------------------------------------------------------------------------
 
-use DBI;
+require 'sqlite3'
 
-my $dir = $ARGV[0] || '.';
+dir = ARGV[0] || '.'
+db = SQLite3::Database.new(dir + '/taginfo-db.db')
+db.results_as_hash = true
 
-my $dbh = DBI->connect("dbi:SQLite:dbname=$dir/taginfo-db.db", '', '');
-$dbh->{unicode} = 1;
-#$dbh->{sqlite_unicode} = 1;
+#------------------------------------------------------------------------------
 
-my @regexes = (
-    ['plain',   qr{^[a-z]([a-z_]*[a-z])?$}],
-    ['colon',   qr{^[a-z][a-z_:]*[a-z]$}],
-    ['letters', qr{^[\p{L}\p{M}]([\p{L}\p{M}\p{N}_:]*[\p{L}\p{M}\p{N}])?$}],
-    ['space',   qr{[\s\p{Z}]}],
-    ['problem', qr{[=+/&<>;\@'"?%#\\,\p{C}]}]
-);
+regexes = [
+    [ 'plain',   %r{^[a-z]([a-z_]*[a-z])?$} ],
+    [ 'colon',   %r{^[a-z][a-z_:]*[a-z]$} ],
+    [ 'letters', %r{^[\p{L}\p{M}]([\p{L}\p{M}\p{N}_:]*[\p{L}\p{M}\p{N}])?$}u ],
+    [ 'space',   %r{[\s\p{Z}]}u ],
+    [ 'problem', %r{[=+/&<>;\@'"?%#\\,\p{C}]}u ]
+];
 
-my %keys;
-my $results = $dbh->selectcol_arrayref('SELECT key FROM keys');
+keys = {}
+db.execute("SELECT key FROM keys").map{ |row| row['key'] }.each do |key|
+    keys[key] = 'rest'
+    regexes.each do |type, regex|
+        if key.match(regex)
+            keys[key] = type
+            break
+        end
+    end 
+end
 
-ROW: foreach my $key (@$results) {
-    $keys{$key} = 'rest';
-    foreach my $r (@regexes) {
-        if ($key =~ $r->[1]) {
-            $keys{$key} = $r->[0];
-            next ROW;
-        }
-    }
-}
-
-$dbh->do('BEGIN TRANSACTION');
-
-foreach my $key (keys %keys) {
-    $dbh->do('UPDATE keys SET characters=? WHERE key=?', undef, $keys{$key}, $key);
-}
-
-$dbh->do('COMMIT');
-
+db.transaction do |db|
+    keys.each do |key, type|
+        db.execute("UPDATE keys SET characters=? WHERE key=?", type, key);
+    end
+end
 
 #-- THE END -------------------------------------------------------------------

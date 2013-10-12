@@ -79,7 +79,7 @@ misc:
     users_tooltip: Number of distinct users who last changed objects with this key.
     prevalent_values: Prevalent values
     prevalent_values_tooltip: Up to ten of the most common values for this key (only if more than 1% of tags with this key have this value).
-    in_wiki_tooltip: Key has at least one wiki page.
+    in_wiki_tooltip: Has at least one wiki page.
     in_josm_tooltip: Key appears in JOSM config.
 
 help:
@@ -202,7 +202,7 @@ pages:
         empty_role: empty role
     key:
         description_from_wiki: Description of this key from the wiki (if available in your chosen language, otherwise in English).
-        no_description_in_wiki: No description for this key in the wiki.
+        no_description_in_wiki: No English language description for this key in the wiki. (See also the "Wiki" tab.)
         filter:
             label: |
                  Filter:
@@ -242,8 +242,10 @@ pages:
             no_styles: No JOSM styles for this key.
     tag:
         description_from_wiki: Description of this tag from the wiki (if available in your chosen language, otherwise in English).
-        no_description_in_wiki: No description for this tag in the wiki.
+        no_description_in_wiki: No English language description for this tag in the wiki. (See also the "Wiki" tab.)
         number_objects: Number of objects
+        overview:
+            see_also: See also the relation type page
         other_tags_used:
             title: Other tags used together with this tag
             other: Other tags
@@ -270,7 +272,7 @@ pages:
     relation:
         name: Relation type
         description_from_wiki: Description of this relation type from the wiki (if available in your chosen language, otherwise in English).
-        no_description_in_wiki: No description for this relation type in the wiki.
+        no_description_in_wiki: No English language description for this relation type in the wiki. (See also the "Wiki" tab.)
         overview:
             tab: Overview
             title: Overview
@@ -288,6 +290,11 @@ pages:
         graph:
             tab: Roles Graph
             title: Roles Graph
+        wiki_pages:
+            title: Wiki pages about this relation type
+            none_found: No wiki page available for this relation type.
+            create: Create wiki page for this relation type
+            wiki_page: Wiki page
 
 flexigrid:
     pagetext: Page
@@ -317,6 +324,9 @@ sources:
     merkaartor:
         name: Merkaartor
         description: Configuration data from the Merkaartor OSM editor.
+    languages:
+        name: Languages
+        description: Language names, codes, etc. from IANA and Unicode registries.
 
 reports:
     characters_in_keys:

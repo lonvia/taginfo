@@ -78,7 +78,7 @@ misc:
     users_tooltip: Anzahl unterschiedlicher User, die die Objekte mit diesem Key zuletzt geändert haben.
     prevalent_values: Häufige Values
     prevalent_values_tooltip: Bis zu zehn der häufigsten Values zu diesem Key (Anzeige nur, wenn mehr als 1% der Tags mit diesem Key auch diesen Value haben).
-    in_wiki_tooltip: Zu diesem Key gibt es mindestens eine Wiki-Seite.
+    in_wiki_tooltip: Zu diesem Objekt gibt es mindestens eine Wiki-Seite.
     in_josm_tooltip: Der Key erscheint in der JOSM-Konfiguration.
 
 help:
@@ -206,7 +206,7 @@ pages:
         empty_role: Role ist leer
     key:
         description_from_wiki: Beschreibung dieses Keys aus dem Wiki (falls vorhanden in der gewählten Sprache, sonst auf Englisch).
-        no_description_in_wiki: Keine Beschreibung dieses Keys im Wiki.
+        no_description_in_wiki: Keine deutschsprachige Beschreibung dieses Keys im Wiki. (Siehe auch im "Wiki"-Tab.)
         filter:
             label: |
                  Filter:
@@ -246,8 +246,10 @@ pages:
             no_styles: Keine JOSM-Stilregeln für diesen Key.
     tag:
         description_from_wiki: Beschreibung dieses Tags aus dem Wiki (falls vorhanden in der gewählten Sprache, sonst auf Englisch).
-        no_description_in_wiki: Keine Beschreibung dieses Tags im Wiki.
+        no_description_in_wiki: Keine deutschsprachige Beschreibung dieses Tags im Wiki. (Siehe auch im "Wiki"-Tab.)
         number_objects: Anzahl Objekte
+        overview:
+            see_also: Siehe auch auf der Relation-Typ-Seite
         other_tags_used:
             title: Tags, die mit diesem Tag zusammen benutzt werden
             other: Andere Tags
@@ -274,7 +276,7 @@ pages:
     relation:
         name: Relation-Typ
         description_from_wiki: Beschreibung dieses Relations-Types aus dem Wiki  (falls vorhanden in der gewählten Sprache, sonst auf Englisch).
-        no_description_in_wiki: Keine Beschreibung dieser Relation im Wiki.
+        no_description_in_wiki: Keine deutschsprachige Beschreibung dieser Relation im Wiki. (Siehe auch im "Wiki"-Tab.)
         overview:
             tab: Übersicht
             title: Übersicht
@@ -289,6 +291,14 @@ pages:
             ways_tooltip:  Relation Members vom Typ Way mit dieser Rolle (und als Prozentsatz aller Members von Typ Way) für diesen Relation-Typ.
             relations_tooltip:  Relation Members vom Typ Relation mit dieser Rolle (und als Prozentsatz aller Members von Typ Relation) für diesen Relation-Typ.
             no_roles_info: Zu diesem Relation-Typ gibt es keine Informationen über Roles (wahrscheinlich weil es nur sehr wenige dieser Relations gibt).
+        graph:
+            tab: Role-Diagramm
+            title: Role-Diagramm
+        wiki_pages:
+            title: Wiki-Seiten zu diesem Relation-Typ
+            none_found: Keine Wiki-Seiten für diesen Relation-Typ vorhanden.
+            create: Wiki-Seite für diesen Relation-Typ anlegen
+            wiki_page: Wiki-Seite
 
 flexigrid:
     pagetext: Seite
@@ -318,6 +328,9 @@ sources:
     merkaartor:
         name: Merkaartor
         description: Einstellungen des OSM-Editors "Merkaartor".
+    languages:
+        name: Sprachen
+        description: Namen, Codes, usw. zu Sprachen aus IANA- und Unicode-Registrierungen.
 
 reports:
     characters_in_keys:

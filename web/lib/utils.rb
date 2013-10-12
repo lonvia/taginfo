@@ -85,6 +85,25 @@ def josm_link(element, key, value=nil)
     '<span class="button">' + external_link('josm_button', 'JOSM', 'http://localhost:8111/import?url=' + Rack::Utils::escape(xapi_url(element, key, value)), true) + '</span>'
 end
 
+def turbo_link(filter, key, value=nil)
+    template = 'key';
+    parameters = { :key => key }
+
+    unless value.nil?
+        parameters[:value] = value;
+        template += '-value'
+    end
+
+    if filter != 'all'
+        template += '-type'
+        parameters[:type] = filter.chop
+    end
+    parameters[:template] = template
+    
+    url = TaginfoConfig.get('turbo.url_prefix', 'http://overpass-turbo.eu/?') + Rack::Utils::build_query(parameters)
+    return '<span class="button">' + external_link('turbo_button', '<img src="/img/turbo.png" title="Turbo"/>', url, true) + '</span>'
+end
+
 def external_link(id, title, link, new_window=false)
     target = new_window ? 'target="_blank" ' : ''
     %Q{<a id="#{id}" #{target}rel="nofollow" class="extlink" href="#{link}">#{title}</a>}
@@ -140,19 +159,19 @@ end
 # Used in wiki api calls
 def get_wiki_result(res)
     return res.map{ |row| {
-            :lang             => h(row['lang']),
-            :language         => h(::Language[row['lang']].native_name),
-            :language_en      => h(::Language[row['lang']].english_name),
-            :title            => h(row['title']),
-            :description      => h(row['description']),
+            :lang             => row['lang'],
+            :language         => ::Language[row['lang']].native_name,
+            :language_en      => ::Language[row['lang']].english_name,
+            :title            => row['title'],
+            :description      => row['description'] || '',
             :image            => {
-                :title            => h(row['image']),
+                :title            => row['image'],
                 :width            => row['width'].to_i,
                 :height           => row['height'].to_i,
-                :mime             => h(row['mime']),
-                :image_url        => h(row['image_url']),
-                :thumb_url_prefix => h(row['thumb_url_prefix']),
-                :thumb_url_suffix => h(row['thumb_url_suffix'])
+                :mime             => row['mime'],
+                :image_url        => row['image_url'],
+                :thumb_url_prefix => row['thumb_url_prefix'],
+                :thumb_url_suffix => row['thumb_url_suffix']
             },
             :on_node          => row['on_node'].to_i     == 1,
             :on_way           => row['on_way'].to_i      == 1,
@@ -175,11 +194,11 @@ def get_josm_style_rules_result(total, res)
             :key        => row['k'],
             :value      => row['v'],
             :value_bool => row['b'],
-            :rule       => h(row['rule']),
-            :area_color => row['area_color'] ? h(row['area_color'].sub(/^.*#/, '#')) : '',
-            :line_color => row['line_color'] ? h(row['line_color'].sub(/^.*#/, '#')) : '',
+            :rule       => row['rule'],
+            :area_color => row['area_color'] ? row['area_color'].sub(/^.*#/, '#') : '',
+            :line_color => row['line_color'] ? row['line_color'].sub(/^.*#/, '#') : '',
             :line_width => row['line_width'] ? row['line_width'].to_i : 0,
-            :icon       => row['icon_source'] && row['icon_source'] != 'misc/deprecated.png' && row['icon_source'] != 'misc/no_icon.png' ? h(row['icon_source']) : ''
+            :icon       => row['icon_source'] && row['icon_source'] != 'misc/deprecated.png' && row['icon_source'] != 'misc/no_icon.png' ? row['icon_source'] : ''
         } }
     }.to_json
 end

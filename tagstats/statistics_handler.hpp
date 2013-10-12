@@ -22,6 +22,8 @@
 
 */
 
+#include <boost/foreach.hpp>
+
 #include "sqlite.hpp"
 
 /**
@@ -45,6 +47,9 @@ public:
             "ways",
             "way_tags",
             "way_nodes",
+            "way_nodes_consecutive",
+            "way_nodes_within_127",
+            "way_nodes_within_32767",
             "max_way_id",
             "max_tags_on_way",
             "max_nodes_on_way",
@@ -52,6 +57,9 @@ public:
             "relations",
             "relation_tags",
             "relation_members",
+            "relation_member_nodes",
+            "relation_member_ways",
+            "relation_member_relations",
             "max_relation_id",
             "max_tags_on_relation",
             "max_members_on_relation",
@@ -114,6 +122,19 @@ public:
             m_stats.max_way_version = m_version;
         }
         m_stats.sum_way_version += m_version;
+
+        osm_object_id_t ref = 0;
+        BOOST_FOREACH(const Osmium::OSM::WayNode& wn, way->nodes()) {
+            osm_object_id_t diff = wn.ref() - ref;
+            if (diff == 1) {
+                ++m_stats.way_nodes_consecutive;
+            } else if (diff <= 127) { // 2^7-1
+                ++m_stats.way_nodes_within_127;
+            } else if (diff <= 32767) { // 2^15-1
+                ++m_stats.way_nodes_within_32767;
+            }
+            ref = wn.ref();
+        }
     }
 
     void relation(const shared_ptr<Osmium::OSM::Relation const>& relation) {
@@ -135,6 +156,20 @@ public:
             m_stats.max_relation_version = m_version;
         }
         m_stats.sum_relation_version += m_version;
+
+        BOOST_FOREACH(const Osmium::OSM::RelationMember& member, relation->members()) {
+            switch (member.type()) {
+                case 'n':
+                    ++m_stats.relation_member_nodes;
+                    break;
+                case 'w':
+                    ++m_stats.relation_member_ways;
+                    break;
+                case 'r':
+                    ++m_stats.relation_member_relations;
+                    break;
+            }
+        }
     }
 
     void final() {
@@ -167,6 +202,9 @@ private:
         uint64_t ways;
         uint64_t way_tags;
         uint64_t way_nodes;
+        uint64_t way_nodes_consecutive;
+        uint64_t way_nodes_within_127;
+        uint64_t way_nodes_within_32767;
         uint64_t max_way_id;
         uint64_t max_tags_on_way;
         uint64_t max_nodes_on_way;
@@ -174,6 +212,9 @@ private:
         uint64_t relations;
         uint64_t relation_tags;
         uint64_t relation_members;
+        uint64_t relation_member_nodes;
+        uint64_t relation_member_ways;
+        uint64_t relation_member_relations;
         uint64_t max_relation_id;
         uint64_t max_tags_on_relation;
         uint64_t max_members_on_relation;
