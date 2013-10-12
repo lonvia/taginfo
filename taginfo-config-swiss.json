@@ -8,7 +8,7 @@
         // Used in the title of all HTML pages.
         "name": "Taginfo Switzerland",
         // Description that appears if you click on the instance icon in the upper left.
-        "description": "This is the Swiss Taginfo instance. It shows only tag information of OSM data within Switzerland. It is updated twice weekly, on Monday and Thursday.",
+        "description": "This is the Swiss Taginfo instance. It shows only tag information of OSM data within Switzerland. It is updated daily.",
         // URL path to instance icon in the upper left.
         "icon": "/img/logo/ch.png",
         // Contact name and email address.
