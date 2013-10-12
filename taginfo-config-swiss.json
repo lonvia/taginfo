@@ -34,7 +34,10 @@
         // URL prefix for the XAPI/JOSM links on the key and tag pages.
         // "url_prefix": "http://www.informationfreeway.org/api/0.6/"
         //"url_prefix": "http://open.mapquestapi.com/xapi/api/0.6/"
-        "url_prefix": "http://osm.xiala.net:8080/xapi/api/0.6/"
+        "url_prefix": "http://overpass.osm.ch/xapi?"
+    },
+    "turbo": {
+        "url_prefix": "http://overpass-turbo.eu/?zoom=9&lat=46.92079&lon=8.07464&"
     },
     "opensearch": {
         // For the OpenSearchDescription. You have to change at least the shortname and the contact for your instance.
@@ -53,14 +56,29 @@
         "create": "db",
         "db": {
             "tagstats": "../../tagstats/tagstats",
-            "planetfile": "/home/suzuki/osm/dev/data/switzerland.osm.pbf"
+            "planetfile": "/home/osm/data/switzerland.osm.pbf"
+        },
+        "master": {
+            // Minimum number of occurances of a tag to make it
+            // potentially "interesting", ie. create tag combination
+            // statistics for it.
+            "min_count_tags": 1000,
+            // Tag combinations not appearing this often are not written to database.
+            "min_tag_combination_count": 100,
+            // Minimum number of relations per type to make this
+            // relation type "interesting", ie. to make it show
+            // up as a relation type.
+            "min_count_relations_per_type": 50
         }
+
     },
     "tagstats": {
         // Extra compilerflags, for instance to find Osmium.
         "cxxflags": "-I../../osmium/include",
         // Node location store. For really large OSM files (whole planet or large continent)
         // this should be "Mmap", otherwise "SparseTable".
-        "geodistribution": "SparseTable"
+        "geodistribution": "SparseTable",
+        // C++ type used for geodistribution
+        "geodistribution_int": "uint32_t"
     }    
 }
